@@ -67,6 +67,14 @@ body {
     background-color: #1d9ca7;
 }
 
+#downloadButton{
+    background-color: #ff9800;
+}
+
+#downloadButton:hover{
+    background-color: #e68a00;
+}
+
 #erroresButton{
     background-color: #1a1a1a;
 }

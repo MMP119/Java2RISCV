@@ -31,6 +31,26 @@ export class CompilerVisitor extends BaseVisitor{
 
 
     /**
+     * @type {BaseVisitor['visitCadena']}
+     */
+    visitCadena(node){
+        this.code.comment(`Cadena: ${node.valor}`);
+        this.code.pushContant({ type: 'string', valor: node.valor });
+        this.code.comment(`Fin Cadena: ${node.valor}`);
+    }
+
+
+    /**
+     * @type {BaseVisitor['visitBooleano']}
+     */
+    visitBooleano(node){
+        this.code.comment(`Booleano: ${node.valor}`);
+        this.code.pushContant({ type: 'int', valor: node.valor ? 1 : 0 });
+        this.code.comment(`Fin Booleano: ${node.valor}`);
+    }
+
+
+    /**
      * @type {BaseVisitor['visitOperacionBinaria']}
      */
     visitOperacionBinaria(node){
@@ -135,7 +155,6 @@ export class CompilerVisitor extends BaseVisitor{
 
     visitDeclaracionTipoVariable(node){
         this.code.comment(`Declaracion de variable: ${node.id}`);
-        
         node.exp.accept(this);
         this.code.tagObject(node.id);
 

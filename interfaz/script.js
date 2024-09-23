@@ -46,6 +46,18 @@ var consoleEditor = CodeMirror.fromTextArea(document.getElementById('consoleOutp
 });
 
 
+
+//garbage collector
+const content = localStorage.getItem('content')
+editor.setValue(content || "");
+
+// save content in local storage
+editor.on('change', (editor) => {
+    const content = editor.getValue()
+    localStorage.setItem('content', content)
+});
+
+
 //funcion para el boton 'open', abre un archivo
 document.getElementById('openButton').addEventListener('click', function() {
     var input = document.createElement('input'); //crea un input
@@ -182,6 +194,42 @@ document.getElementById('saveButton').addEventListener('click', function() {
     // Simular un clic en el enlace para iniciar la descarga
     downloadLink.click();
 });
+
+
+//boton para guardar la salida en consola
+document.getElementById('downloadButton').addEventListener('click', function() {
+
+    // Solicitar al usuario el nombre del archivo
+    let fileName = window.prompt('Ingrese el nombre del archivo:', '');
+    
+    // Si el usuario cancela o no ingresa un nombre, salir de la función
+    if (fileName === null || fileName === '') {
+        return; // No hacer nada si el usuario cancela
+    }
+    
+    // Obtener el contenido del editor
+    const codeContent = consoleEditor.getValue();
+
+    // Asegurar que el archivo tenga una extensión
+    if (!fileName.endsWith('.s')) {
+        fileName += '.s';
+    }
+
+    // Crear un blob con el contenido del editor
+    const blob = new Blob([codeContent], { type: 'text/plain' });
+
+    // Crear un enlace de descarga
+    const downloadLink = document.createElement('a');
+    downloadLink.href = window.URL.createObjectURL(blob);
+
+    // Asignar el nombre ingresado por el usuario al archivo
+    downloadLink.download = fileName;
+
+    // Simular un clic en el enlace para iniciar la descarga
+    downloadLink.click();
+
+});
+
 
 //para el erroresButton
 document.getElementById('erroresButton').addEventListener('click', function() {
