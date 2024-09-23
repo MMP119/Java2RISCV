@@ -1,7 +1,32 @@
-import { parse } from '../interprete/analizador/analizador.js';
+import { parse as parseInterpreter } from '../interprete/analizador/analizador.js';
 import { InterpreterVisitor} from '../interprete/patron/interprete.js';
 import { obtenerErrores, limpiarErrores, obtenerErroresHTML, registrarError } from '../interprete/global/errores.js';
 import { obtenerSimbolos, limpiarSimbolos, obtenerSimbolosHTML } from '../interprete/global/simbolos.js';
+
+// para risc-v
+import { parse as parseCompiler } from '../RISC-V/analizador/analizador.js';
+import { CompilerVisitor } from '../RISC-V/compilador/compilador.js';
+
+
+// modo personalizado para RISC-V
+CodeMirror.defineSimpleMode("riscv", {
+    start: [
+        // Instrucciones comunes de RISC-V
+        { regex: /\b(?:add|sub|mul|div|rem|lw|sw|li|mv|beq|bne|blt|bge|jal|jr|ecall)\b/, token: "keyword" },
+        
+        // Registros RISC-V
+        { regex: /\b(?:zero|ra|sp|gp|tp|t[0-6]|s[0-11]|a[0-7])\b/, token: "variable-2" },
+        
+        // Comentarios (usando el formato de comentario de ensamblador)
+        { regex: /#.*/, token: "comment" },
+        
+        // Números
+        { regex: /\b\d+\b/, token: "number" },
+        
+        // Caracteres especiales para etiquetas y saltos
+        { regex: /[a-zA-Z_]\w*:/, token: "atom" }, // Para etiquetas como "main:"
+    ]
+});
 
 // Inicializa CodeMirror en el textarea con id 'codeInput'
 var editor = CodeMirror.fromTextArea(document.getElementById('codeInput'), {
@@ -14,7 +39,7 @@ var editor = CodeMirror.fromTextArea(document.getElementById('codeInput'), {
 // Inicializa CodeMirror en el textarea con id 'consoleOutput'
 var consoleEditor = CodeMirror.fromTextArea(document.getElementById('consoleOutput'), {
     lineNumbers: false,
-    mode: "text/plain",
+    mode: "riscv", //modo ensamblador
     theme: "dracula",
     readOnly: true,
     viewportMargin: Infinity,
@@ -46,7 +71,7 @@ document.getElementById('runButton').addEventListener('click', () => {
     const code = editor.getValue();
 
     try {
-        const ast = parse(code); // analizar el código
+        const ast = parseInterpreter(code); // analizar el código
 
         const interpretacion = new InterpreterVisitor(); // crear un visitante
 
@@ -57,18 +82,40 @@ document.getElementById('runButton').addEventListener('click', () => {
             ast.accept(interpretacion); // Si es un solo nodo
         }
 
-        let output = interpretacion.salida;
-
+        //let output = interpretacion.salida;
+        let output = "";
         const erroes = obtenerErrores();
         if(erroes.length > 0){
+            output += '-------------->    ERROR FATAL, NO SE PUEDE COMPILAR   <--------------\n\n';
             output += '\n\n============================== ERRORES ==============================\n';
             erroes.forEach(error => {
                 output += `Error: ${error.mensaje}\nLínea: ${error.linea}, Columna: ${error.columna}\n`;
             });
-        }
+            consoleEditor.setValue(output);
+        }else{
 
-        // Mostrar la salida en la consola
-        consoleEditor.setValue(output);        
+                const astCompiler = parseCompiler(code); // analizar el código
+
+                const compilador = new CompilerVisitor(); // crear un visitante
+
+                astCompiler.forEach(sentencia => sentencia.accept(compilador));
+
+                output =  compilador.code.toString();
+
+                consoleEditor.setValue(output);
+
+                // Verificar si el AST es un arreglo o un solo nodo
+                // if (Array.isArray(astCompiler)) {
+                //     astCompiler.forEach(nodo => nodo.accept(compilador));
+                // } else {
+                //     astCompiler.accept(compilador); // Si es un solo nodo
+                // }
+
+                // output = compilador.salida;
+
+                // // Mostrar la salida en la consola
+                // consoleEditor.setValue(output);                           
+            }     
 
     } catch (e) {
         if (e.name === 'SyntaxError') {
