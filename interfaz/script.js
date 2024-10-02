@@ -11,20 +11,22 @@ import { CompilerVisitor } from '../RISC-V/compilador/compilador.js';
 // modo personalizado para RISC-V
 CodeMirror.defineSimpleMode("riscv", {
     start: [
-        // Instrucciones comunes de RISC-V
-        { regex: /\b(?:add|sub|mul|div|rem|lw|sw|li|mv|beq|bne|blt|bge|jal|jr|ecall)\b/, token: "keyword" },
-        
+        // Instrucciones aritméticas, lógicas, de carga/almacenamiento, control de flujo, etc.
+        { regex: /\b(?:add|sub|mul|mulh|mulhsu|mulhu|div|divu|rem|remu|addi|li|la|j|slli|slti|sltiu|xori|ori|andi|srai|srli|lb|lh|lw|lbu|lhu|sb|sh|sw|beq|bne|blt|bge|bltu|bgeu|jal|jalr|ecall|ebreak|lui|auipc|fence|fence.i|csrrw|csrrs|csrrc|csrrwi|csrrsi|csrrci|sll|srl|sra|xor|or|and|slt|sltu|mv)\b/, token: "keyword" },
+
         // Registros RISC-V
-        { regex: /\b(?:zero|ra|sp|gp|tp|t[0-6]|s[0-11]|a[0-7])\b/, token: "variable-2" },
-        
-        // Comentarios (usando el formato de comentario de ensamblador)
+        { regex: /\b(?:zero|ra|sp|gp|tp|t[0-6]|s[0-11]|a[0-7]|pc)\b/, token: "variable-3" },  // Cambiado a 'variable-3' para otro color
+
+        // Comentarios
         { regex: /#.*/, token: "comment" },
-        
-        // Números
+
+        // Números (decimales, hexadecimales, binarios)
         { regex: /\b\d+\b/, token: "number" },
-        
-        // Caracteres especiales para etiquetas y saltos
-        { regex: /[a-zA-Z_]\w*:/, token: "atom" }, // Para etiquetas como "main:"
+        { regex: /\b0x[0-9a-fA-F]+\b/, token: "number" },
+        { regex: /\b0b[01]+\b/, token: "number" },
+
+        // Etiquetas y saltos
+        { regex: /[a-zA-Z_]\w*:/, token: "atom" },
     ]
 });
 

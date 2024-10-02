@@ -341,4 +341,93 @@ export class CompilerVisitor extends BaseVisitor{
 
 
 
+    /**
+     * @type {BaseVisitor['visitIf']}
+     */
+    visitIf(node) {
+        this.code.comment('Inicio de If');
+
+        // Visitar la condición y generar el código correspondiente
+        node.cond.accept(this);
+        
+        // Pop the result of the condition into a register
+        this.code.popObject(r.T0); // El resultado de la condición está en T0 (1 o 0)
+
+        // Generar etiquetas únicas para manejar el flujo
+        const labelTrue = this.code.newEtiquetaUnica('if_true');
+        const labelEnd = this.code.newEtiquetaUnica('if_end');
+        const labelFalse = node.stmtFalse ? this.code.newEtiquetaUnica('else') : null;
+
+        // Si T0 es verdadero (1), saltar a la etiqueta de la rama verdadera
+        this.code.comment('Comparación de If');
+        this.code.bne(r.T0, r.ZERO, labelTrue);
+
+        // Si hay una rama falsa, saltar a ella
+        if (labelFalse) {
+            this.code.j(labelFalse);
+        } else {
+            // Si no hay rama falsa, saltar directamente al final
+            this.code.j(labelEnd);
+        }
+
+        // Etiqueta para la rama verdadera
+        this.code.label(labelTrue);
+        node.stmtTrue.accept(this); // Ejecutar el bloque si la condición es verdadera
+
+        // Saltar al final del `if` después de ejecutar el bloque verdadero
+        this.code.j(labelEnd);
+
+        // Rama falsa (opcional)
+        if (labelFalse) {
+            this.code.label(labelFalse);
+            node.stmtFalse.accept(this); // Ejecutar el bloque si la condición es falsa
+        }
+
+        // Etiqueta final
+        this.code.label(labelEnd);
+
+        this.code.comment('Fin de If');
+    }
+
+
+
+    /**
+     * @type {BaseVisitor['visitWhile']}
+     */
+    visitWhile(node) {
+
+        this.code.comment('Inicio de While');
+
+        // Generar etiquetas únicas para manejar el flujo
+        const labelStart = this.code.newEtiquetaUnica('while_start');
+        const labelEnd = this.code.newEtiquetaUnica('while_end');
+
+        // Etiqueta de inicio
+        this.code.label(labelStart);
+
+        // Visitar la condición y generar el código correspondiente
+        node.cond.accept(this);
+
+        // Pop the result of the condition into a register
+        this.code.popObject(r.T0); // El resultado de la condición está en T0 (1 o 0)
+
+        // Si T0 es falso (0), saltar al final del bucle
+        this.code.comment('Comparación de While');
+        this.code.beq(r.T0, r.ZERO, labelEnd);
+
+        // Ejecutar el bloque del bucle
+        node.stmt.accept(this);
+
+        // Volver al inicio del bucle
+        this.code.j(labelStart);
+
+        // Etiqueta final
+        this.code.label(labelEnd);
+
+        this.code.comment('Fin de While');    
+    
+    }
+
+
+
 }
