@@ -412,7 +412,12 @@ export class Generador {
         if (rd !== r.A0) {
             this.pop(r.A0)
         }
-
+        //agregar un salto de línea
+        this.comment('Agregando salto de línea')
+        this.li(r.A0, 10) // 10 es el código ASCII para '\n'
+        this.li(r.A7, 11) // 11 es el código de llamada al sistema para imprimir un carácter
+        this.ecall()
+        this.comment('Termina salto de linea')
     }
 
     printString(rd = r.A0) {
@@ -428,6 +433,12 @@ export class Generador {
         if (rd !== r.A0) {
             this.pop(r.A0)
         }
+        //agregar un salto de línea
+        this.comment('Agregando salto de línea')
+        this.li(r.A0, 10) // 10 es el código ASCII para '\n'
+        this.li(r.A7, 11) // 11 es el código de llamada al sistema para imprimir un carácter
+        this.ecall()
+        this.comment('Termina salto de linea')
     }
 
     endProgram() {
