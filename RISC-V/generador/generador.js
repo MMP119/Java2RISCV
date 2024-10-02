@@ -26,7 +26,13 @@ export class Generador {
         this.instrucciones = []
         this.objectStack = []
         this.depth = 0
+        this.etiquetaUnica = 0
+    }
 
+
+    //Generador de etiquetas únicas
+    newEtiquetaUnica(nombre){
+        return `${nombre}_${this.etiquetaUnica++}`
     }
 
 
@@ -223,16 +229,15 @@ export class Generador {
 
 
     //Branch: saltos condicionales
-    beq(rs1, rs2, inmediato) {
+    beq(rs1, rs2, inmediato) { //branch if equal
         this.instrucciones.push(new Instruction('beq', rs1, rs2, inmediato))
     }
     
-    beqz(rs1, label) {
-        // Agrega la instrucción beq (branch if equal) a la lista de instrucciones
+    beqz(rs1, label) { //branch if equal zero
         this.instrucciones.push(new Instruction('beqz', rs1, label));
     }
 
-    bne(rs1, rs2, inmediato) {
+    bne(rs1, rs2, inmediato) {//branch if not equal
         this.instrucciones.push(new Instruction('bne', rs1, rs2, inmediato))
     }
 
@@ -385,7 +390,11 @@ export class Generador {
 
     //-------------------------------------------------------------------------------------------------------
 
+    label(label) {
+        this.instrucciones.push(new Instruction(`${label}:`))
+    }
 
+    //-------------------------------------------------------------------------------------------------------
 
     push(rd = r.T0) {
         this.addi(r.SP, r.SP, -4) // 4 bytes = 32 bits
@@ -564,3 +573,7 @@ main:
 
 
 }
+
+
+
+

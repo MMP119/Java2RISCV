@@ -61,6 +61,11 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.popObject(r.T0); // der
         this.code.popObject(r.T1); // izq
 
+        //Generar etiquetas únicas
+        let labelTrue = this.code.newEtiquetaUnica('set_true');
+        let labelFalse = this.code.newEtiquetaUnica('set_false');
+        let end_comparison = this.code.newEtiquetaUnica('end_comparison');
+
         switch (node.op) {
             case '+':
                 this.code.add(r.T0, r.T0, r.T1);
@@ -82,6 +87,102 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.rem(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
                 break;
+            case '==':
+                this.code.comment('Comparación igualdad');
+                // Si son iguales, setear a true (1)
+                this.code.beq(r.T1, r.T0, labelTrue);
+                this.code.j(labelFalse);
+                this.code.label(labelTrue);
+                this.code.li(r.T0, 1); // se agina true a t0
+                this.code.j(end_comparison)
+                this.code.label(labelFalse);
+                this.code.li(r.T0, 0); // se asigna false a t1
+                this.code.label(end_comparison);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación igualdad');
+                break;
+            case '!=':
+                this.code.comment('Comparación desigualdad');
+                // Si son diferentes, setear a true (1)
+                this.code.bne(r.T1, r.T0, labelTrue);
+                this.code.j(labelFalse);
+                this.code.label(labelTrue);
+                this.code.li(r.T0, 1); // se agina true a t0
+                this.code.j(end_comparison)
+                this.code.label(labelFalse);
+                this.code.li(r.T0, 0); // se asigna false a t1
+                this.code.label(end_comparison);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación desigualdad');
+                break;
+            case '>':
+                this.code.comment('Comparación mayor que');
+                // Si es mayor, setear a true (1)
+                this.code.bgt(r.T1, r.T0, labelTrue);
+                this.code.j(labelFalse);
+                this.code.label(labelTrue);
+                this.code.li(r.T0, 1); // se agina true a t0
+                this.code.j(end_comparison)
+                this.code.label(labelFalse);
+                this.code.li(r.T0, 0); // se asigna false a t1
+                this.code.label(end_comparison);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación mayor que');
+                break;
+            case '<':
+                this.code.comment('Comparación menor que');
+                // Si es menor, setear a true (1)
+                this.code.blt(r.T1, r.T0, labelTrue);
+                this.code.j(labelFalse);
+                this.code.label(labelTrue);
+                this.code.li(r.T0, 1); // se agina true a t0
+                this.code.j(end_comparison)
+                this.code.label(labelFalse);
+                this.code.li(r.T0, 0); // se asigna false a t1
+                this.code.label(end_comparison);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación menor que');
+                break;
+            case '>=':
+                this.code.comment('Comparación mayor o igual que');
+                // Si es mayor o igual, setear a true (1)
+                this.code.bge(r.T1, r.T0, labelTrue);
+                this.code.j(labelFalse);
+                this.code.label(labelTrue);
+                this.code.li(r.T0, 1); // se agina true a t0
+                this.code.j(end_comparison)
+                this.code.label(labelFalse);
+                this.code.li(r.T0, 0); // se asigna false a t1
+                this.code.label(end_comparison);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación mayor o igual que');
+                break;
+            case '<=':
+                this.code.comment('Comparación menor o igual que');
+                // Si es menor o igual, setear a true (1)
+                this.code.ble(r.T1, r.T0, labelTrue);
+                this.code.j(labelFalse);
+                this.code.label(labelTrue);
+                this.code.li(r.T0, 1); // se agina true a t0
+                this.code.j(end_comparison)
+                this.code.label(labelFalse);
+                this.code.li(r.T0, 0); // se asigna false a t1
+                this.code.label(end_comparison);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación menor o igual que');
+                break;
+            case '&&':
+                this.code.comment('Comparación AND');
+                this.code.and(r.T0, r.T1, r.T0);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación AND');
+                break;
+            case '||':
+                this.code.comment('Comparación OR');
+                this.code.or(r.T0, r.T1, r.T0);
+                this.code.push(r.T0);
+                this.code.comment('Fin Comparación OR');
+                break;
         }
         this.code.pushObject({ type: 'int', length: 4 });
     }
@@ -99,10 +200,20 @@ export class CompilerVisitor extends BaseVisitor{
 
         switch (node.op) {
             case '-':
+                this.code.comment('Operación negación');
                 this.code.li(r.T1, 0);
                 this.code.sub(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
                 this.code.pushObject({ type: 'int', length: 4 });
+                this.code.comment('FIN Operación negación');
+                break;
+            case '!':
+                this.code.comment('Comparación NOT');
+                this.code.li(r.T1, 1); //cargar 1 en t1(true)
+                this.code.xor(r.T0, r.T0, r.T1); //xor para negar t0 = t0 xor t1 (invierte el valor de t0)
+                this.code.push(r.T0);
+                this.code.pushObject({ type: 'int', length: 4 });
+                this.code.comment('FIN NOT');
                 break;
         }
     
