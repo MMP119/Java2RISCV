@@ -542,7 +542,12 @@ export class CompilerVisitor extends BaseVisitor{
                     }
                 }
             });
-            // No generamos un salto aquí para que continúe al siguiente case si no hay break
+            
+            //si es el ultimo case y no hay break, saltar al final así no se ejecuta el default
+            if(index === node.cases.length - 1){
+                this.code.j(labelEnd);
+            }
+
         });
 
         // Bloque del default (si existe y ningún case coincidió)
