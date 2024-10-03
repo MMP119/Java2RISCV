@@ -1,6 +1,7 @@
 import { registers as r } from "../constantes/constantes.js";
 import { Generador } from "../generador/generador.js";
 import { BaseVisitor} from "../compilador/visitor.js"
+import {ExcepcionBrake, ExcepcionContinue, ExcepcionReturn} from "../../interprete/expresiones/operaciones/transferencia.js";
 
 
 export class CompilerVisitor extends BaseVisitor{
@@ -8,6 +9,13 @@ export class CompilerVisitor extends BaseVisitor{
     constructor(){
         super();
         this.code = new Generador();
+
+
+
+        /**
+         * @type {Expresion|null}
+         */
+        this.antesContinue = null;
     }
 
 
@@ -413,7 +421,7 @@ export class CompilerVisitor extends BaseVisitor{
 
         // Si T0 es falso (0), saltar al final del bucle
         this.code.comment('Comparación de While');
-        this.code.beq(r.T0, r.ZERO, labelEnd);
+        this.code.beq(r.T0, r.ZERO, labelEnd); // Si la condición es falsa, saltar al final, si no, continuar
 
         // Ejecutar el bloque del bucle
         node.stmt.accept(this);
@@ -426,6 +434,151 @@ export class CompilerVisitor extends BaseVisitor{
 
         this.code.comment('Fin de While');    
     
+    }
+
+
+
+    /**
+     * @type {BaseVisitor['visitFor']}
+     */
+    visitFor(node) {
+
+        this.code.comment('Inicio de For');
+
+        // Inicialización
+        node.init.accept(this);
+
+        // Generar etiquetas únicas
+        const labelStart = this.code.newEtiquetaUnica('for_start');
+        const labelEnd = this.code.newEtiquetaUnica('for_end');
+
+        // Etiqueta de inicio
+        this.code.label(labelStart);
+
+        // Evaluar la condición
+        node.cond.accept(this);
+
+        // Pop the result of the condition into a register
+        this.code.popObject(r.T0); // El resultado de la condición está en T0 (1 o 0)
+
+        // Si T0 es falso (0), saltar al final del bucle
+        this.code.comment('Comparación de For');
+        this.code.beq(r.T0, r.ZERO, labelEnd); // Si la condición es falsa, saltar al final
+
+        // Ejecutar el cuerpo del bucle
+        node.stmt.accept(this);
+
+        // Incremento
+        node.inc.accept(this);
+
+        // Saltar al inicio para reevaluar la condición
+        this.code.j(labelStart);
+
+        // Etiqueta final
+        this.code.label(labelEnd);
+
+        this.code.comment('Fin de For');
+    }
+
+    
+
+    /**
+     * @type {BaseVisitor['visitSwitch']}
+     */
+    visitSwitch(node) {
+        this.code.comment('Inicio de Switch');
+
+        // Evaluar la expresión del switch y guardar el valor en T0
+        node.exp.accept(this);
+        this.code.popObject(r.T0); // El valor del switch está en T0
+
+        // Copiar el valor de la expresión en t1
+        this.code.comment('Copiar el valor de la expresión en t1');
+        this.code.mv(r.T1, r.T0); // t1 = t0
+
+        const labelEnd = this.code.newEtiquetaUnica('switch_end');
+        let labelDefault = null; // Etiqueta para el bloque default
+        const caseLabels = node.cases.map(() => this.code.newEtiquetaUnica('case')); // Etiquetas para cada case
+
+        let defaultJumpAdded = false; // Para evitar saltar al default innecesariamente
+
+        // Comparar el valor del switch con cada case
+        node.cases.forEach((caseNode, index) => {
+            this.code.comment(`Caso ${index + 1}`);
+
+            caseNode.exp.accept(this);
+            this.code.popObject(r.T0); // El valor del case está en T0
+
+            // Si coincide, saltar a este case
+            this.code.beq(r.T1, r.T0, caseLabels[index]);
+        });
+
+        // Si existe un default, generar la etiqueta para el default
+        if (node.defaultClause) {
+            labelDefault = this.code.newEtiquetaUnica('default');
+            this.code.j(labelDefault); // Saltar al default si ningún case coincide
+            defaultJumpAdded = true;
+        }
+
+        // Si no hay default, saltar directamente al final
+        if (!defaultJumpAdded) {
+            this.code.j(labelEnd);
+        }
+
+        // Generar los bloques de código para cada case
+        node.cases.forEach((caseNode, index) => {
+            this.code.label(caseLabels[index]); // Etiqueta del case
+
+            // Ejecutar el código del case
+            caseNode.stmt.forEach(stmt => {
+                try {
+                    stmt.accept(this);
+                } catch (e) {
+                    if (e instanceof ExcepcionBrake) {
+                        this.code.j(labelEnd); // Saltar al final si hay un break
+                        return;
+                    } else {
+                        throw e;
+                    }
+                }
+            });
+            // No generamos un salto aquí para que continúe al siguiente case si no hay break
+        });
+
+        // Bloque del default (si existe y ningún case coincidió)
+        if (node.defaultClause) {
+            this.code.label(labelDefault);
+            node.defaultClause.stmt.forEach(stmt => {
+                stmt.accept(this);
+            });
+        }
+
+        // Etiqueta para el final del switch
+        this.code.label(labelEnd);
+        this.code.comment('Fin de Switch');
+    }
+
+
+    
+    /**
+     * @type {BaseVisitor['visitBreak']}
+     */
+    visitBreak(node){
+        throw new ExcepcionBrake();
+    }
+
+
+
+    /**
+     * @type {BaseVisitor['visitContinue']}
+     */
+    visitContinue(node){
+
+        if(this.antesContinue){
+            this.antesContinue.accept(this);
+        }
+
+        throw new ExcepcionContinue();
     }
 
 
