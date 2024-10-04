@@ -9,6 +9,8 @@ export class CompilerVisitor extends BaseVisitor{
     constructor(){
         super();
         this.code = new Generador();
+        this.labelBreak = null;
+        this.labelContinue = null;
 
 
 
@@ -409,6 +411,7 @@ export class CompilerVisitor extends BaseVisitor{
         // Generar etiquetas únicas para manejar el flujo
         const labelStart = this.code.newEtiquetaUnica('while_start');
         const labelEnd = this.code.newEtiquetaUnica('while_end');
+        const labelContinue = labelStart; // La etiqueta de continue debe saltar a la reevaluación de la condición
 
         // Etiqueta de inicio
         this.code.label(labelStart);
@@ -423,8 +426,20 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.comment('Comparación de While');
         this.code.beq(r.T0, r.ZERO, labelEnd); // Si la condición es falsa, saltar al final, si no, continuar
 
+        // Guardar las etiquetas de break y continue en el contexto actual
+        const oldLabelBreak = this.labelBreak;
+        const oldLabelContinue = this.labelContinue;
+
+        // Asignar las nuevas etiquetas para este bucle
+        this.labelBreak = labelEnd;
+        this.labelContinue = labelContinue;
+
         // Ejecutar el bloque del bucle
         node.stmt.accept(this);
+        
+        // Restaurar las etiquetas anteriores
+        this.labelBreak = oldLabelBreak;
+        this.labelContinue = oldLabelContinue;
 
         // Volver al inicio del bucle
         this.code.j(labelStart);
@@ -451,6 +466,7 @@ export class CompilerVisitor extends BaseVisitor{
         // Generar etiquetas únicas
         const labelStart = this.code.newEtiquetaUnica('for_start');
         const labelEnd = this.code.newEtiquetaUnica('for_end');
+        const labelContinue = this.code.newEtiquetaUnica('for_continue'); // La etiqueta de continue debe saltar al incremento
 
         // Etiqueta de inicio
         this.code.label(labelStart);
@@ -465,14 +481,27 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.comment('Comparación de For');
         this.code.beq(r.T0, r.ZERO, labelEnd); // Si la condición es falsa, saltar al final
 
+
+        const oldLabelBreak = this.labelBreak;
+        const oldLabelContinue = this.labelContinue;
+
+        // Asignar las nuevas etiquetas para este bucle
+        this.labelBreak = labelEnd;
+        this.labelContinue = labelContinue;
+
         // Ejecutar el cuerpo del bucle
         node.stmt.accept(this);
 
         // Incremento
+        this.code.label(this.labelContinue);
         node.inc.accept(this);
 
         // Saltar al inicio para reevaluar la condición
         this.code.j(labelStart);
+
+        // Restaurar las etiquetas anteriores
+        this.labelBreak = oldLabelBreak;
+        this.labelContinue = oldLabelContinue;
 
         // Etiqueta final
         this.code.label(labelEnd);
@@ -568,8 +597,14 @@ export class CompilerVisitor extends BaseVisitor{
     /**
      * @type {BaseVisitor['visitBreak']}
      */
-    visitBreak(node){
-        throw new ExcepcionBrake();
+    visitBreak(node) {
+        if (this.labelBreak) {
+            this.code.comment('Break');
+            this.code.j(this.labelBreak); // Saltar a la etiqueta de break actual (final del bucle o case en switch)
+        } else {
+            // Error: no se puede usar break fuera de un bucle o switch
+            throw new Error("Error: 'break' usado fuera de un bucle o switch.");
+        }
     }
 
 
@@ -577,13 +612,14 @@ export class CompilerVisitor extends BaseVisitor{
     /**
      * @type {BaseVisitor['visitContinue']}
      */
-    visitContinue(node){
-
-        if(this.antesContinue){
-            this.antesContinue.accept(this);
+    visitContinue(node) {
+        if (this.labelContinue) {
+            this.code.comment('Continue');
+            this.code.j(this.labelContinue); // Saltar a la etiqueta de reevaluación del bucle actual
+        } else {
+            // Error: no se puede usar continue fuera de un bucle
+            throw new Error("Error: 'continue' usado fuera de un bucle.");
         }
-
-        throw new ExcepcionContinue();
     }
 
 
