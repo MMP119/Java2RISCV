@@ -115,7 +115,7 @@ body {
 }
 
 .editor {
-    flex: 1.2; /* tamaño de cada uno, más; mayor tamaño*/
+    flex: 1; /* tamaño de cada uno, más; mayor tamaño*/
     display: flex;
     flex-direction: column;
     position: relative;

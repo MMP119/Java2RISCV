@@ -1,7 +1,7 @@
 import { registers as r } from "../constantes/constantes.js";
 import { Generador } from "../generador/generador.js";
 import { BaseVisitor} from "../compilador/visitor.js"
-import {ExcepcionBrake, ExcepcionContinue, ExcepcionReturn} from "../../interprete/expresiones/operaciones/transferencia.js";
+import { registrarError } from "../../interprete/global/errores.js";
 
 
 export class CompilerVisitor extends BaseVisitor{
@@ -528,6 +528,9 @@ export class CompilerVisitor extends BaseVisitor{
         const labelEnd = this.code.newEtiquetaUnica('switch_end');
         let labelDefault = null; // Etiqueta para el bloque default
         const caseLabels = node.cases.map(() => this.code.newEtiquetaUnica('case')); // Etiquetas para cada case
+        const oldLabelBreak = this.labelBreak; // Guardar la etiqueta de break actual
+
+        this.labelBreak = labelEnd; // La etiqueta de break debe saltar al final del switch
 
         let defaultJumpAdded = false; // Para evitar saltar al default innecesariamente
 
@@ -560,16 +563,7 @@ export class CompilerVisitor extends BaseVisitor{
 
             // Ejecutar el código del case
             caseNode.stmt.forEach(stmt => {
-                try {
-                    stmt.accept(this);
-                } catch (e) {
-                    if (e instanceof ExcepcionBrake) {
-                        this.code.j(labelEnd); // Saltar al final si hay un break
-                        return;
-                    } else {
-                        throw e;
-                    }
-                }
+                stmt.accept(this);
             });
             
             //si es el ultimo case y no hay break, saltar al final así no se ejecuta el default
@@ -589,6 +583,7 @@ export class CompilerVisitor extends BaseVisitor{
 
         // Etiqueta para el final del switch
         this.code.label(labelEnd);
+        this.labelBreak = oldLabelBreak; // Restaurar la etiqueta de break
         this.code.comment('Fin de Switch');
     }
 
@@ -603,6 +598,7 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.j(this.labelBreak); // Saltar a la etiqueta de break actual (final del bucle o case en switch)
         } else {
             // Error: no se puede usar break fuera de un bucle o switch
+            registrarError('Semántico', 'Error: "break" usado fuera de un bucle o switch.',node.location.start.line, node.location.start.column);
             throw new Error("Error: 'break' usado fuera de un bucle o switch.");
         }
     }
@@ -618,6 +614,7 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.j(this.labelContinue); // Saltar a la etiqueta de reevaluación del bucle actual
         } else {
             // Error: no se puede usar continue fuera de un bucle
+            registrarError('Semántico', 'Error: "break" usado fuera de un bucle o switch.',node.location.start.line, node.location.start.column);
             throw new Error("Error: 'continue' usado fuera de un bucle.");
         }
     }

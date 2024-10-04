@@ -40,7 +40,7 @@ var editor = CodeMirror.fromTextArea(document.getElementById('codeInput'), {
 
 // Inicializa CodeMirror en el textarea con id 'consoleOutput'
 var consoleEditor = CodeMirror.fromTextArea(document.getElementById('consoleOutput'), {
-    lineNumbers: false,
+    lineNumbers: true,
     mode: "riscv", //modo ensamblador
     theme: "dracula",
     readOnly: true,
