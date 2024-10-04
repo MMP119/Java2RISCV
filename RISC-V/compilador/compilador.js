@@ -61,6 +61,44 @@ export class CompilerVisitor extends BaseVisitor{
 
 
     /**
+     * @type {BaseVisitor['visitDeclaracionTipoVariable']}
+     */
+
+    visitDeclaracionTipoVariable(node){
+        this.code.comment(`Declaracion de variable: ${node.id}`);
+
+        if(node.exp === null && node.tipo !== null){ //para expresiones como int a; o float b;
+            switch (node.tipo) {
+                case 'int':
+                    this.code.pushContant({ type: node.tipo, valor: 0 });
+                    break;
+                case 'float':
+                    this.code.pushContant({ type: node.tipo, valor: 0.0 });
+                    break;
+                case 'char':
+                    this.code.pushContant({ type: node.tipo, valor: '' });
+                    break;
+                case 'string':
+                    this.code.pushContant({ type: node.tipo, valor: "" });
+                    break;
+                case 'boolean':
+                    this.code.pushContant({ type: 'int', valor: 1 });
+                    break;
+                default:
+                    console.log("entro a default");
+                    registrarError('Semántico', `Tipo de dato no soportado: ${node.tipo}`,node.location.start.line, node.location.start.column);
+                    throw new Error(`Tipo de dato no soportado: ${node.tipo}`);
+            }
+        }else{
+            node.exp.accept(this);
+        }
+        
+        this.code.tagObject(node.id);
+        this.code.comment(`Fin Declaracion de variable: ${node.id}`);
+    }
+
+
+    /**
      * @type {BaseVisitor['visitOperacionBinaria']}
      */
     visitOperacionBinaria(node){
@@ -266,20 +304,6 @@ export class CompilerVisitor extends BaseVisitor{
         } else {
             throw new Error(`Tipo de dato no soportado para imprimir: ${object.type}`);
         }
-    }
-
-
-
-    /**
-     * @type {BaseVisitor['visitDeclaracionTipoVariable']}
-     */
-
-    visitDeclaracionTipoVariable(node){
-        this.code.comment(`Declaracion de variable: ${node.id}`);
-        node.exp.accept(this);
-        this.code.tagObject(node.id);
-
-        this.code.comment(`Fin Declaracion de variable: ${node.id}`);
     }
 
 
