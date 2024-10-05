@@ -1,5 +1,6 @@
 import { registers as r } from "../constantes/constantes.js";
-import { stringTo32BitsArray } from "../utils/utils.js";
+import { stringTo1ByteArray, stringTo32BitsArray } from "../utils/utils.js";
+import { builtins } from "../utils/builtins.js";
 
 class Instruction {
 
@@ -27,6 +28,7 @@ export class Generador {
         this.objectStack = []
         this.depth = 0
         this.etiquetaUnica = 0
+        this._usedBuiltins = new Set()
     }
 
 
@@ -208,8 +210,8 @@ export class Generador {
         this.instrucciones.push(new Instruction('j', label))
     }
     
-    jal(rd, label) {
-        this.instrucciones.push(new Instruction('jal', rd, label))
+    jal(label) {
+        this.instrucciones.push(new Instruction('jal', label))
     }
 
     jalr(rd, rs1, inmediato = 0) {
@@ -450,6 +452,15 @@ export class Generador {
         this.comment('Termina salto de linea')
     }
 
+    callBuiltin(builtinName) {
+        if (!builtins[builtinName]) {
+            throw new Error(`Builtin ${builtinName} not found`)
+        }
+        this._usedBuiltins.add(builtinName)
+        this.jal(builtinName)
+    }
+
+
     endProgram() {
         this.li(r.A7, 10)
         this.ecall()
@@ -457,6 +468,14 @@ export class Generador {
 
     comment(text) {
         this.instrucciones.push(new Instruction(`# ${text}`))
+    }
+
+    callBuiltin(builtinName) {
+        if (!builtins[builtinName]) {
+            throw new Error(`Builtin ${builtinName} not found`)
+        }
+        this._usedBuiltins.add(builtinName)
+        this.jal(builtinName)
     }
 
     pushContant(object) {
@@ -470,19 +489,29 @@ export class Generador {
                 break;
 
             case 'string':
-                const stringArray = stringTo32BitsArray(object.valor);
+                const stringArray = stringTo1ByteArray(object.valor);
 
                 this.comment(`Pushing string ${object.valor}`);
-                this.addi(r.T0, r.HP, 4);
-                this.push(r.T0);
+                // this.addi(r.T0, r.HP, 4);
+                // this.push(r.T0);
+                this.push(r.HP);
 
-                stringArray.forEach((block32bits) => {
-                    this.li(r.T0, block32bits);
+                stringArray.forEach((charCode) => {
+                    this.li(r.T0, charCode);
                     // this.push(r.T0);
-                    this.addi(r.HP, r.HP, 4);
-                    this.sw(r.T0, r.HP);
+                    // this.addi(r.HP, r.HP, 4);
+                    // this.sw(r.T0, r.HP);
+
+                    this.sb(r.T0, r.HP);
+                    this.addi(r.HP, r.HP, 1);
                 });
 
+                length = 4;
+                break;
+
+            case 'boolean':
+                this.li(r.T0, object.valor ? 1 : 0);
+                this.push(r.T0);
                 length = 4;
                 break;
 
@@ -559,7 +588,16 @@ export class Generador {
 
     toString() {
         this.endProgram()
-        return `.data
+        this.comment('Builtins')
+
+        Array.from(this._usedBuiltins).forEach(builtinName => {
+            this.label(builtinName)
+            builtins[builtinName](this)
+            this.ret()
+        })
+
+        return `
+.data
         heap:
 .text
 

@@ -103,11 +103,75 @@ export class CompilerVisitor extends BaseVisitor{
      */
     visitOperacionBinaria(node){
         this.code.comment(`Operacion: ${node.op}`);
+
+        /*if(node.op === '&&'){
+            this.code.comment('Comparación AND');
+            node.izq.accept(this);
+            this.code.popObject(r.T0);
+
+            const labelFalse = this.code.newEtiquetaUnica('and_false');
+            const labelEnd = this.code.newEtiquetaUnica('and_end');
+
+            this.code.beq(r.T0, r.ZERO, labelFalse); // if(!izq) goto false
+            node.der.accept(this);
+            this.code.popObject(r.T0);
+            this.code.beq(r.T0, r.ZERO, labelFalse); // if(!der) goto false
+
+            this.code.li(r.T0, 1); // t0 = 1
+            this.code.push(r.T0);
+            this.code.j(labelEnd);
+            this.code.label(labelFalse);
+            this.code.li(r.T0, 0); // t0 = 0
+            this.code.push(r.T0);
+
+            this.code.label(labelEnd);
+            this.code.pushObject({ type: 'boolean', length: 4 });
+            this.code.comment('Fin Comparación AND');
+            return;
+        }
+
+
+        if(node.op === '||'){
+            this.code.comment('Comparación OR');
+            node.izq.accept(this);
+            this.code.popObject(r.T0);
+
+            const labelTrue = this.code.newEtiquetaUnica('or_true');
+            const labelEnd = this.code.newEtiquetaUnica('or_end');
+
+            this.code.bne(r.T0, r.ZERO, labelTrue); // if(izq) goto true
+            node.der.accept(this);
+            this.code.popObject(r.T0);
+            this.code.bne(r.T0, r.ZERO, labelTrue); // if(der) goto true
+
+            this.code.li(r.T0, 0); // t0 = 0
+            this.code.push(r.T0);
+            this.code.j(labelEnd);
+            this.code.label(labelTrue);
+            this.code.li(r.T0, 1); // t0 = 1
+            this.code.push(r.T0);
+
+            this.code.label(labelEnd);
+            this.code.pushObject({ type: 'boolean', length: 4 });
+            this.code.comment('Fin Comparación OR');
+            return;
+        }*/
+
+
         node.izq.accept(this); // izq |
         node.der.accept(this); // izq | der
 
-        this.code.popObject(r.T0); // der
-        this.code.popObject(r.T1); // izq
+        const der = this.code.popObject(r.T0); // der
+        const izq = this.code.popObject(r.T1); // izq
+
+        if (izq.type === 'string' && der.type === 'string') {
+            this.code.add(r.A0, r.ZERO, r.T1);
+            this.code.add(r.A1, r.ZERO, r.T0);
+            this.code.callBuiltin('concatString');
+            this.code.pushObject({ type: 'string', length: 4 });
+            return;
+        }
+        
 
         //Generar etiquetas únicas
         let labelTrue = this.code.newEtiquetaUnica('set_true');
