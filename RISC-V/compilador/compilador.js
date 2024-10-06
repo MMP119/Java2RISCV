@@ -384,7 +384,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.li(r.T1, 1); //cargar 1 en t1(true)
                 this.code.xor(r.T0, r.T0, r.T1); //xor para negar t0 = t0 xor t1 (invierte el valor de t0)
                 this.code.push(r.T0);
-                this.code.pushObject({ type: 'int', length: 4 });
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 this.code.comment('FIN NOT');
                 break;
         }
