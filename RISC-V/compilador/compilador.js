@@ -348,26 +348,33 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.comment('Print');
         
         let resultado = "";
-
+        
         node.exp.forEach((exp) => {
             const valor = exp.accept(this);
             resultado += valor;
+            
+            // Pop object y luego decidir el tipo
+            const object = this.code.popObject(r.A0);
+            
+            const tipoPrint = {
+                'int': () => this.code.printInt(),
+                'string': () => this.code.printString()
+            };
+            
+            // Llama a la función correcta según el tipo de objeto
+            if (tipoPrint[object.type]) {
+                tipoPrint[object.type]();
+            } else {
+                throw new Error(`Tipo de dato no soportado para imprimir: ${object.type}`);
+            }
+            
+            // si es el ultimo del arreglo de expresiones, se imprime un salto de linea
+            if(exp === node.exp[node.exp.length - 1]){
+                this.code.printNewLine();
+            }
+
         });
-    
-        // Pop object y luego decidir el tipo
-        const object = this.code.popObject(r.A0);
-    
-        const tipoPrint = {
-            'int': () => this.code.printInt(),
-            'string': () => this.code.printString()
-        };
-    
-        // Llama a la función correcta según el tipo de objeto
-        if (tipoPrint[object.type]) {
-            tipoPrint[object.type]();
-        } else {
-            throw new Error(`Tipo de dato no soportado para imprimir: ${object.type}`);
-        }
+
     }
 
 
