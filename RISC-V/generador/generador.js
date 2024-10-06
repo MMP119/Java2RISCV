@@ -442,19 +442,40 @@ export class Generador {
     }
 
 
+    printChar(rd = r.A0) {
+            
+        if (rd !== r.A0) {
+            this.push(r.A0)
+            this.add(r.A0, rd, r.ZERO)
+        }
+
+        this.li(r.A7, 11)
+        this.ecall()
+
+        if (rd !== r.A0) {
+            this.pop(r.A0)
+        }
+    
+    }
+
+
     printBool(rd = r.A0) {
         if (rd !== r.A0) {
             this.push(r.A0);           // Guardamos A0 en el stack si no es el valor actual
             this.add(r.A0, rd, r.ZERO); // Movemos el valor de rd a A0
         }
-    
+        
+        const print_true = this.newEtiquetaUnica('print_true');
+        const print_false = this.newEtiquetaUnica('print_false');
+        const end_print_bool = this.newEtiquetaUnica('end_print_bool');
+
         // Comparar si el valor en A0 es 1 o 0 (true o false)
         this.li(r.T1, 1);      // Cargar el valor 1 en T1
-        this.beq(r.A0, r.T1, 'print_true'); // Si es igual a 1, saltar a imprimir true
-        this.j('print_false');              // Si no, saltar a imprimir false
+        this.beq(r.A0, r.T1, print_true); // Si es igual a 1, saltar a imprimir true
+        this.j(print_false);              // Si no, saltar a imprimir false
     
         // Sección para imprimir true
-        this.label('print_true');
+        this.label(print_true);
         this.comment("Imprimir true");
         this.pushString("true"); // Cargar y guardar la cadena "true" en el heap
         this.lw(r.A0, r.SP);     // Recuperar la dirección de la cadena "true" desde el stack
@@ -462,10 +483,10 @@ export class Generador {
         this.li(r.A7, 4);        // Syscall para imprimir una cadena
         this.ecall();            // Hacer la llamada de sistema
     
-        this.j('end_print_bool'); // Saltar al final
+        this.j(end_print_bool); // Saltar al final
     
         // Sección para imprimir false
-        this.label('print_false');
+        this.label(print_false);
         this.comment("Imprimir false");
         this.pushString("false"); // Cargar y guardar la cadena "false" en el heap
         this.lw(r.A0, r.SP);      // Recuperar la dirección de la cadena "false" desde el stack
@@ -474,7 +495,7 @@ export class Generador {
         this.ecall();             // Hacer la llamada de sistema
     
         // Fin de la impresión
-        this.label('end_print_bool');
+        this.label(end_print_bool);
         
         // Restaurar el valor de A0 si fue modificado
         if (rd !== r.A0) {
@@ -572,6 +593,12 @@ export class Generador {
                 length = 4;
                 break;
 
+            case 'char':
+                this.li(r.T0, object.valor.charCodeAt(0));
+                this.push(r.T0);
+                length = 4;
+                break;
+
             default:
                 break;
         }
@@ -597,6 +624,10 @@ export class Generador {
                 break;
 
             case 'boolean':
+                this.pop(rd);
+                break;
+
+            case 'char':
                 this.pop(rd);
                 break;
 
