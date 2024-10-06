@@ -45,7 +45,7 @@ export class CompilerVisitor extends BaseVisitor{
      */
     visitCadena(node){
         this.code.comment(`Cadena: ${node.valor}`);
-        this.code.pushContant({ type: 'string', valor: node.valor });
+        this.code.pushContant({ type: node.tipo, valor: node.valor });
         this.code.comment(`Fin Cadena: ${node.valor}`);
     }
 
@@ -55,7 +55,7 @@ export class CompilerVisitor extends BaseVisitor{
      */
     visitBooleano(node){
         this.code.comment(`Booleano: ${node.valor}`);
-        this.code.pushContant({ type: 'int', valor: node.valor ? 1 : 0 });
+        this.code.pushContant({ type: 'boolean', valor: node.valor ? 1 : 0 });
         this.code.comment(`Fin Booleano: ${node.valor}`);
     }
 
@@ -82,7 +82,7 @@ export class CompilerVisitor extends BaseVisitor{
                     this.code.pushContant({ type: node.tipo, valor: "" });
                     break;
                 case 'boolean':
-                    this.code.pushContant({ type: 'int', valor: 1 });
+                    this.code.pushContant({ type: 'boolean', valor: 1 });
                     break;
                 default:
                     console.log("entro a default");
@@ -182,22 +182,27 @@ export class CompilerVisitor extends BaseVisitor{
             case '+':
                 this.code.add(r.T0, r.T0, r.T1);
                 this.code.push(r.T0);
+                this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '-':
                 this.code.sub(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
+                this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '*':
                 this.code.mul(r.T0, r.T0, r.T1);
                 this.code.push(r.T0);
+                this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '/':
                 this.code.div(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
+                this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '%':
                 this.code.rem(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
+                this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '==':
                 this.code.comment('Comparación igualdad');
@@ -212,6 +217,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.label(end_comparison);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación igualdad');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '!=':
                 this.code.comment('Comparación desigualdad');
@@ -226,6 +232,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.label(end_comparison);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación desigualdad');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '>':
                 this.code.comment('Comparación mayor que');
@@ -240,6 +247,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.label(end_comparison);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación mayor que');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '<':
                 this.code.comment('Comparación menor que');
@@ -254,6 +262,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.label(end_comparison);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación menor que');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '>=':
                 this.code.comment('Comparación mayor o igual que');
@@ -268,6 +277,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.label(end_comparison);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación mayor o igual que');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '<=':
                 this.code.comment('Comparación menor o igual que');
@@ -282,21 +292,23 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.label(end_comparison);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación menor o igual que');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '&&':
                 this.code.comment('Comparación AND');
                 this.code.and(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación AND');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '||':
                 this.code.comment('Comparación OR');
                 this.code.or(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
                 this.code.comment('Fin Comparación OR');
+                this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
         }
-        this.code.pushObject({ type: 'int', length: 4 });
     }
 
 
@@ -358,7 +370,8 @@ export class CompilerVisitor extends BaseVisitor{
             
             const tipoPrint = {
                 'int': () => this.code.printInt(),
-                'string': () => this.code.printString()
+                'string': () => this.code.printString(),
+                'boolean': () => this.code.printBool()
             };
             
             // Llama a la función correcta según el tipo de objeto

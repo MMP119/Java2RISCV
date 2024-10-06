@@ -423,15 +423,9 @@ export class Generador {
         if (rd !== r.A0) {
             this.pop(r.A0)
         }
-        //agregar un salto de línea
-        // this.comment('Agregando salto de línea')
-        // this.li(r.A0, 10) // 10 es el código ASCII para '\n'
-        // this.li(r.A7, 11) // 11 es el código de llamada al sistema para imprimir un carácter
-        // this.ecall()
-        // this.comment('Termina salto de linea')
     }
 
-    
+
     printString(rd = r.A0) {
 
         if (rd !== r.A0) {
@@ -445,15 +439,66 @@ export class Generador {
         if (rd !== r.A0) {
             this.pop(r.A0)
         }
-        //agregar un salto de línea
-        // this.comment('Agregando salto de línea')
-        // this.li(r.A0, 10) // 10 es el código ASCII para '\n'
-        // this.li(r.A7, 11) // 11 es el código de llamada al sistema para imprimir un carácter
-        // this.ecall()
-        // this.comment('Termina salto de linea')
     }
 
 
+    printBool(rd = r.A0) {
+        if (rd !== r.A0) {
+            this.push(r.A0);           // Guardamos A0 en el stack si no es el valor actual
+            this.add(r.A0, rd, r.ZERO); // Movemos el valor de rd a A0
+        }
+    
+        // Comparar si el valor en A0 es 1 o 0 (true o false)
+        this.li(r.T1, 1);      // Cargar el valor 1 en T1
+        this.beq(r.A0, r.T1, 'print_true'); // Si es igual a 1, saltar a imprimir true
+        this.j('print_false');              // Si no, saltar a imprimir false
+    
+        // Sección para imprimir true
+        this.label('print_true');
+        this.comment("Imprimir true");
+        this.pushString("true"); // Cargar y guardar la cadena "true" en el heap
+        this.lw(r.A0, r.SP);     // Recuperar la dirección de la cadena "true" desde el stack
+        this.addi(r.SP, r.SP, 4); // Ajustar el puntero de stack
+        this.li(r.A7, 4);        // Syscall para imprimir una cadena
+        this.ecall();            // Hacer la llamada de sistema
+    
+        this.j('end_print_bool'); // Saltar al final
+    
+        // Sección para imprimir false
+        this.label('print_false');
+        this.comment("Imprimir false");
+        this.pushString("false"); // Cargar y guardar la cadena "false" en el heap
+        this.lw(r.A0, r.SP);      // Recuperar la dirección de la cadena "false" desde el stack
+        this.addi(r.SP, r.SP, 4);  // Ajustar el puntero de stack
+        this.li(r.A7, 4);         // Syscall para imprimir una cadena
+        this.ecall();             // Hacer la llamada de sistema
+    
+        // Fin de la impresión
+        this.label('end_print_bool');
+        
+        // Restaurar el valor de A0 si fue modificado
+        if (rd !== r.A0) {
+            this.pop(r.A0);       // Recuperar el valor original de A0 desde el stack
+        }
+    }
+
+
+    pushString(string) {
+        const stringArray = stringTo1ByteArray(string);
+    
+        // Comentario para rastrear la cadena
+        this.comment(`Pushing string ${string}`);
+        this.push(r.HP); // Guardamos la dirección del heap (HP) en el stack para esta cadena
+    
+        // Cargar los caracteres de la cadena en el heap
+        stringArray.forEach((charCode) => {
+            this.li(r.T0, charCode); // Cargar el código ASCII del carácter en T0
+            this.sb(r.T0, r.HP);     // Guardar el carácter en la posición actual del heap
+            this.addi(r.HP, r.HP, 1); // Mover el puntero del heap al siguiente byte
+        });
+    }
+
+    
     printNewLine() {
         //agregar un salto de línea
         this.comment('Agregando salto de línea')
@@ -550,6 +595,11 @@ export class Generador {
             case 'string':
                 this.pop(rd);
                 break;
+
+            case 'boolean':
+                this.pop(rd);
+                break;
+
             default:
                 break;
         }
