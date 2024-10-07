@@ -117,18 +117,7 @@ document.getElementById('runButton').addEventListener('click', () => {
                 output =  compilador.code.toString();
 
                 consoleEditor.setValue(output);
-
-                // Verificar si el AST es un arreglo o un solo nodo
-                // if (Array.isArray(astCompiler)) {
-                //     astCompiler.forEach(nodo => nodo.accept(compilador));
-                // } else {
-                //     astCompiler.accept(compilador); // Si es un solo nodo
-                // }
-
-                // output = compilador.salida;
-
-                // // Mostrar la salida en la consola
-                // consoleEditor.setValue(output);                           
+    
             }     
 
     } catch (e) {

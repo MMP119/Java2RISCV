@@ -458,6 +458,20 @@ export class Generador {
     
     }
 
+    printNull(rd = r.A0) {
+        if (rd !== r.A0) {
+            this.push(r.A0)
+            this.add(r.A0, rd, r.ZERO)
+        }
+
+        this.li(r.A7, 4)
+        this.ecall()
+
+        if (rd !== r.A0) {
+            this.pop(r.A0)
+        }
+    }
+
 
     printBool(rd = r.A0) {
         if (rd !== r.A0) {
@@ -598,6 +612,21 @@ export class Generador {
                 this.push(r.T0);
                 length = 4;
                 break;
+            
+            case 'null':
+                const nullString = stringTo1ByteArray(object.valor);
+                this.comment(`Pushing string ${object.valor}`);
+                this.push(r.HP);
+
+                nullString.forEach((charCode) => {
+                    this.li(r.T0, charCode);
+                    this.sb(r.T0, r.HP);
+                    this.addi(r.HP, r.HP, 1);
+                });
+
+                length = 4;
+                break;
+
 
             default:
                 break;
@@ -628,6 +657,10 @@ export class Generador {
                 break;
 
             case 'char':
+                this.pop(rd);
+                break;
+            
+            case 'null':
                 this.pop(rd);
                 break;
 
