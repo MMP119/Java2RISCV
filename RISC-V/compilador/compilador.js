@@ -104,6 +104,96 @@ export class CompilerVisitor extends BaseVisitor{
     }
 
 
+
+    /**
+     * @type {BaseVisitor['visitDeclaracionArreglo']}
+     */
+    visitDeclaracionArreglo(node){
+        const idArreglo = node.id
+        const tipoArreglo = node.tipo
+        const exp = node.exp
+        const tipo2 = node.tipo2
+        const idArreglo2 = node.id2
+
+        //Si tipo2 e id2 son null, es un arreglo como int [] a = {1,2,3,4,5};
+
+        //Si id2 es null, es un arreglo como int [] a = new int[5]; y se llena con valores por defecto
+
+        //Si exp es null, tipo2 es null, es una "copia de arreglo" como int [] a = b;, b es otro arreglo
+
+        //valores por defecto segun el tipo, como para el casos como int [] a = new int[5];
+        /*
+        * case 'int': 0
+        * case 'float': 0.0
+        * case 'string': ""
+        * case 'boolean': false
+        * case 'char': '\u0000' (caracter nulo)
+        */
+
+        this.code.comment(`Declaracion de arreglo: ${node.id}`);
+
+        if(tipo2 === null && idArreglo2 === null && Array.isArray(exp)){
+            //caso 1, arreglos con valores explicitos como int [] a = {1,2,3,4,5};
+                                                //      tipo[]idArreglo={expresion};
+            this.code.comment('Declaracion de areglo con valores explicitos');
+            
+            this.code.comment(`Fin Declaracion de arreglo con valores explicitos`);
+
+        
+        }else if(idArreglo2 === null && !Array.isArray(exp)){
+            //caso 2, arreglos con valores por defecto como int [] a = new int[5];
+                                                        // tipo[]idArreglo=new tipo2 [exp] expresion acá no es un arreglo
+            console.log("caso 2");
+
+            let valorPorDefecto = null;
+
+            switch(tipo2){
+
+                case 'int':
+                    console.log("int");
+                    valorPorDefecto = 0;
+                    break;
+
+                case 'float':
+                    console.log("float");
+                    valorPorDefecto = 0.0;
+                    break;
+
+                case 'string':
+                    console.log("string");
+                    valorPorDefecto = "";
+                    break;
+
+                case 'boolean':
+                    console.log("boolean");
+                    valorPorDefecto = false;
+                    break;
+
+                case 'char':
+                    console.log("char");
+                    valorPorDefecto = '\u0000';
+                    break;
+
+                default:
+                    registrarError('Semántico', `Tipo de dato no soportado declaracion de arreglo`, node.location.start.line, node.location.start.column);
+                    throw new Error(`Tipo de dato no soportado declaracion de arreglo`);
+
+            }
+
+
+        }else if(exp === null){
+            //caso 3, copia de arreglo como int [] a = b;, b es otro arreglo     
+            console.log("caso 3");   
+        
+        
+        
+        }
+
+        this.code.comment(`Fin Declaracion de arreglo: ${node.id}`);
+
+    }
+
+
     /**
      * @type {BaseVisitor['visitOperacionBinaria']}
      */
@@ -123,12 +213,6 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.pushObject({ type: 'string', length: 4 });
             return;
         }
-        
-
-        //Generar etiquetas únicas
-        let labelTrue = this.code.newEtiquetaUnica('set_true');
-        let labelFalse = this.code.newEtiquetaUnica('set_false');
-        let end_comparison = this.code.newEtiquetaUnica('end_comparison');
 
         switch (node.op) {
             case '+':
@@ -171,186 +255,39 @@ export class CompilerVisitor extends BaseVisitor{
             case '==':
 
                 if (izq.type === 'string' && der.type === 'string') {
-                    // Inicializar comparacion de strings
-                    this.code.comment('Comparación de cadenas de texto');
-            
-                    let loopLabel = this.code.newEtiquetaUnica('string_cmp_loop');
-                    let endLabel = this.code.newEtiquetaUnica('string_cmp_end');
-                    let trueLabel = this.code.newEtiquetaUnica('string_cmp_true');
-                    let falseLabel = this.code.newEtiquetaUnica('string_cmp_false');
-            
-                    // Apuntar al inicio de ambas cadenas
-                    this.code.add(r.T2, r.ZERO, r.T1); // r.T1 contiene el puntero a la primera cadena
-                    this.code.add(r.T3, r.ZERO, r.T0); // r.T0 contiene el puntero a la segunda cadena
-            
-                    this.code.label(loopLabel);
-            
-                    // Cargar un byte de cada cadena
-                    this.code.lbu(r.T4, r.T2); // Cargar el siguiente byte de la primera cadena en r.T4
-                    this.code.lbu(r.T5, r.T3); // Cargar el siguiente byte de la segunda cadena en r.T5
-            
-                    // Comparar los dos bytes
-                    this.code.bne(r.T4, r.T5, falseLabel); // Si los bytes son diferentes, las cadenas no son iguales
-                    this.code.beq(r.T4, r.ZERO, trueLabel); // Si llegamos al final de la cadena ('\0'), las cadenas son iguales
-            
-                    // Avanzar al siguiente carácter
-                    this.code.addi(r.T2, r.T2, 1);
-                    this.code.addi(r.T3, r.T3, 1);
-                    this.code.j(loopLabel); // Repetir el ciclo
-            
-                    // Si encontramos que las cadenas son iguales
-                    this.code.label(trueLabel);
-                    this.code.li(r.T0, 1); // True (1) si las cadenas son iguales
-                    this.code.j(endLabel);
-            
-                    // Si encontramos una diferencia
-                    this.code.label(falseLabel);
-                    this.code.li(r.T0, 0); // False (0) si las cadenas son diferentes
-            
-                    // Fin de la comparación
-                    this.code.label(endLabel);
-                    this.code.push(r.T0); // Poner el resultado en la pila
-                    this.code.comment('Fin Comparación de cadenas');
+                    this.code.callBuiltin('igualdadStrings');
                     this.code.pushObject({ type: 'boolean', length: 4 });
-            
                     return;
                 }
 
-                this.code.comment('Comparación igualdad');
-                // Si son iguales, setear a true (1)
-                this.code.beq(r.T1, r.T0, labelTrue);
-                this.code.j(labelFalse);
-                this.code.label(labelTrue);
-                this.code.li(r.T0, 1); // se agina true a t0
-                this.code.j(end_comparison)
-                this.code.label(labelFalse);
-                this.code.li(r.T0, 0); // se asigna false a t1
-                this.code.label(end_comparison);
-                this.code.push(r.T0);
-                this.code.comment('Fin Comparación igualdad');
+                this.code.callBuiltin('igualdad');
                 this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '!=':
 
                 if (izq.type === 'string' && der.type === 'string') {
-                    // Inicializar comparacion de strings
-                    this.code.comment('Comparación de desigualdad de cadenas de texto');
-            
-                    let loopLabel = this.code.newEtiquetaUnica('string_cmp_loop');
-                    let endLabel = this.code.newEtiquetaUnica('string_cmp_end');
-                    let trueLabel = this.code.newEtiquetaUnica('string_cmp_true');
-                    let falseLabel = this.code.newEtiquetaUnica('string_cmp_false');
-            
-                    // Apuntar al inicio de ambas cadenas
-                    this.code.add(r.T2, r.ZERO, r.T1); // r.T1 contiene el puntero a la primera cadena
-                    this.code.add(r.T3, r.ZERO, r.T0); // r.T0 contiene el puntero a la segunda cadena
-            
-                    this.code.label(loopLabel);
-            
-                    // Cargar un byte de cada cadena
-                    this.code.lbu(r.T4, r.T2); // Cargar el siguiente byte de la primera cadena en r.T4
-                    this.code.lbu(r.T5, r.T3); // Cargar el siguiente byte de la segunda cadena en r.T5
-            
-                    // Comparar los dos bytes
-                    this.code.bne(r.T4, r.T5, trueLabel); // Si los bytes son diferentes, las cadenas no son iguales (True)
-                    this.code.beq(r.T4, r.ZERO, falseLabel); // Si llegamos al final de la cadena ('\0'), las cadenas son iguales (False)
-            
-                    // Avanzar al siguiente carácter
-                    this.code.addi(r.T2, r.T2, 1);
-                    this.code.addi(r.T3, r.T3, 1);
-                    this.code.j(loopLabel); // Repetir el ciclo
-            
-                    // Si encontramos que las cadenas son diferentes
-                    this.code.label(trueLabel);
-                    this.code.li(r.T0, 1); // True (1) si las cadenas son diferentes
-                    this.code.j(endLabel);
-            
-                    // Si encontramos que las cadenas son iguales
-                    this.code.label(falseLabel);
-                    this.code.li(r.T0, 0); // False (0) si las cadenas son iguales
-            
-                    // Fin de la comparación
-                    this.code.label(endLabel);
-                    this.code.push(r.T0); // Poner el resultado en la pila
-                    this.code.comment('Fin Comparación de desigualdad de cadenas');
+                    this.code.callBuiltin('desigualdadStrings');
                     this.code.pushObject({ type: 'boolean', length: 4 });
-            
                     return;
                 }
 
-
-                this.code.comment('Comparación desigualdad');
-                // Si son diferentes, setear a true (1)
-                this.code.bne(r.T1, r.T0, labelTrue);
-                this.code.j(labelFalse);
-                this.code.label(labelTrue);
-                this.code.li(r.T0, 1); // se agina true a t0
-                this.code.j(end_comparison)
-                this.code.label(labelFalse);
-                this.code.li(r.T0, 0); // se asigna false a t1
-                this.code.label(end_comparison);
-                this.code.push(r.T0);
-                this.code.comment('Fin Comparación desigualdad');
+                this.code.callBuiltin('desigualdad');
                 this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '>':
-                this.code.comment('Comparación mayor que');
-                // Si es mayor, setear a true (1)
-                this.code.bgt(r.T1, r.T0, labelTrue);
-                this.code.j(labelFalse);
-                this.code.label(labelTrue);
-                this.code.li(r.T0, 1); // se agina true a t0
-                this.code.j(end_comparison)
-                this.code.label(labelFalse);
-                this.code.li(r.T0, 0); // se asigna false a t1
-                this.code.label(end_comparison);
-                this.code.push(r.T0);
-                this.code.comment('Fin Comparación mayor que');
+                this.code.callBuiltin('mayorQue');
                 this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '<':
-                this.code.comment('Comparación menor que');
-                // Si es menor, setear a true (1)
-                this.code.blt(r.T1, r.T0, labelTrue);
-                this.code.j(labelFalse);
-                this.code.label(labelTrue);
-                this.code.li(r.T0, 1); // se agina true a t0
-                this.code.j(end_comparison)
-                this.code.label(labelFalse);
-                this.code.li(r.T0, 0); // se asigna false a t1
-                this.code.label(end_comparison);
-                this.code.push(r.T0);
-                this.code.comment('Fin Comparación menor que');
+                this.code.callBuiltin('menorQue');
                 this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '>=':
-                this.code.comment('Comparación mayor o igual que');
-                // Si es mayor o igual, setear a true (1)
-                this.code.bge(r.T1, r.T0, labelTrue);
-                this.code.j(labelFalse);
-                this.code.label(labelTrue);
-                this.code.li(r.T0, 1); // se agina true a t0
-                this.code.j(end_comparison)
-                this.code.label(labelFalse);
-                this.code.li(r.T0, 0); // se asigna false a t1
-                this.code.label(end_comparison);
-                this.code.push(r.T0);
-                this.code.comment('Fin Comparación mayor o igual que');
+                this.code.callBuiltin('mayorIgual');
                 this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '<=':
-                this.code.comment('Comparación menor o igual que');
-                // Si es menor o igual, setear a true (1)
-                this.code.ble(r.T1, r.T0, labelTrue);
-                this.code.j(labelFalse);
-                this.code.label(labelTrue);
-                this.code.li(r.T0, 1); // se agina true a t0
-                this.code.j(end_comparison)
-                this.code.label(labelFalse);
-                this.code.li(r.T0, 0); // se asigna false a t1
-                this.code.label(end_comparison);
-                this.code.push(r.T0);
-                this.code.comment('Fin Comparación menor o igual que');
+                this.code.callBuiltin('menorIgual');
                 this.code.pushObject({ type: 'boolean', length: 4 });
                 break;
             case '&&':
@@ -629,6 +566,8 @@ export class CompilerVisitor extends BaseVisitor{
 
         this.code.comment('Inicio de For');
 
+        this.code.newScope(); // Crear un nuevo ámbito para las variables del bucle
+
         // Inicialización
         node.init.accept(this);
 
@@ -664,6 +603,7 @@ export class CompilerVisitor extends BaseVisitor{
         // Incremento
         this.code.label(this.labelContinue);
         node.inc.accept(this);
+        this.code.popObject(r.T0); // Para que no quede en la pila
 
         // Saltar al inicio para reevaluar la condición
         this.code.j(labelStart);
@@ -674,6 +614,13 @@ export class CompilerVisitor extends BaseVisitor{
 
         // Etiqueta final
         this.code.label(labelEnd);
+
+        this.code.comment('Reduciendo la pila');
+        const bytesToRemove = this.code.endScope();
+
+        if (bytesToRemove > 0) {
+            this.code.addi(r.SP, r.SP, bytesToRemove);
+        }
 
         this.code.comment('Fin de For');
     }
