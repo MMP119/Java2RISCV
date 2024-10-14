@@ -118,11 +118,11 @@ export class CompilerVisitor extends BaseVisitor{
         const tipo2 = node.tipo2
         const idArreglo2 = node.id2
 
-        //Si tipo2 e id2 son null, es un arreglo como int [] a = {1,2,3,4,5};
+        //CASO 1: Si tipo2 e id2 son null, es un arreglo como int [] a = {1,2,3,4,5};
 
-        //Si id2 es null, es un arreglo como int [] a = new int[5]; y se llena con valores por defecto
+        //CASO 2: Si id2 es null, es un arreglo como int [] a = new int[5]; y se llena con valores por defecto
 
-        //Si exp es null, tipo2 es null, es una "copia de arreglo" como int [] a = b;, b es otro arreglo
+        //CASO 3: Si exp es null, tipo2 es null, es una "copia de arreglo" como int [] a = b;, b es otro arreglo
 
         //valores por defecto segun el tipo, como para el casos como int [] a = new int[5];
         /*
@@ -139,14 +139,37 @@ export class CompilerVisitor extends BaseVisitor{
             //caso 1, arreglos con valores explicitos como int [] a = {1,2,3,4,5};
                                                 //      tipo[]idArreglo={expresion};
             this.code.comment('Declaracion de areglo con valores explicitos');
-            
-            this.code.comment(`Fin Declaracion de arreglo con valores explicitos`);
 
+            const size = exp.length * 4; // Cada entero ocupa 4 bytes
+            this.code.addi(r.SP, r.SP, -size); // Reservar espacio en la pila
+            this.code.comment(`Reservando ${size} bytes en el stack para ${node.id}`);
+
+            this.code.pushContant({ type: 'arreglo', length: size });
+
+            //guardar cada valor del arreglo en memoria
+            exp.forEach((valor, index) => {
+                valor.accept(this); // Generar el código para la expresión
+
+                const isValueFloat = this.code.getTopObject().type === 'float';
+                this.code.popObject(isValueFloat ? f.FT0 : r.T0); // Obtener el valor de la expresión
+                const offset = index * 4; // Desplazamiento en memoria
+
+                if (isValueFloat) {
+                    this.code.fsw(f.FT0, r.SP, offset);
+                } else {
+                    this.code.sw(r.T0, r.SP, offset);
+                }
+            
+            });
+
+            this.code.tagObject(idArreglo);
+            this.code.comment(`Fin Declaracion de arreglo con valores explicitos`);
         
         }else if(idArreglo2 === null && !Array.isArray(exp)){
             //caso 2, arreglos con valores por defecto como int [] a = new int[5];
                                                         // tipo[]idArreglo=new tipo2 [exp] expresion acá no es un arreglo
-            console.log("caso 2");
+            
+            this.code.comment('Declaracion de arreglo con valores por defecto');
 
             let valorPorDefecto = null;
 
@@ -183,6 +206,7 @@ export class CompilerVisitor extends BaseVisitor{
 
             }
 
+            this.code.comment(`Fin Declaracion de arreglo con valores por defecto`);
 
         }else if(exp === null){
             //caso 3, copia de arreglo como int [] a = b;, b es otro arreglo     
@@ -436,7 +460,6 @@ export class CompilerVisitor extends BaseVisitor{
             
             // Pop object y luego decidir el tipo
             const isFloat = this.code.getTopObject().type === 'float'; 
-            console.log(isFloat);
             const object = this.code.popObject(isFloat ? f.FA0 : r.A0);
             
             const tipoPrint = {
@@ -446,6 +469,7 @@ export class CompilerVisitor extends BaseVisitor{
                 'boolean': () => this.code.callBuiltin('printBool'),
                 'char' : () => this.code.printChar(),
                 'null' : () => this.code.printNull(),
+                'arreglo' : () => this.code.printArreglo(object),
             };
             
             // Llama a la función correcta según el tipo de objeto

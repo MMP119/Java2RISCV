@@ -547,6 +547,41 @@ export class Generador {
         }
     }
 
+    printArreglo(arreglo) {
+        const { length } = arreglo;
+        const elementCount = length / 4; // Asumiendo 4 bytes por elemento
+    
+        this.comment(`Print Arreglo`);
+    
+        // Imprimir apertura del arreglo: "["
+        this.li(r.A0, 91); // ASCII para '['
+        this.printChar();
+    
+        // Recuperar la dirección del arreglo desde el stack
+        this.pop(r.T1); // T0 tiene la dirección del arreglo
+    
+        for (let i = 0; i < elementCount; i++) {
+            const offset = i * 4;
+    
+            // Cargar el elemento desde la memoria relativa a T0
+            this.lw(r.T1, r.T0, offset);
+    
+            // Imprimir el valor como entero (ajustar según el tipo si es necesario)
+            this.printInt(r.T1);
+    
+            // Imprimir coma y espacio si no es el último elemento
+            if (i < elementCount - 1) {
+                this.li(r.A0, 44); // ASCII para ','
+                this.printChar();
+                this.li(r.A0, 32); // ASCII para ' '
+                this.printChar();
+            }
+        }
+    
+        // Imprimir cierre del arreglo: "]"
+        this.li(r.A0, 93); // ASCII para ']'
+        this.printChar();
+    }
 
     callBuiltin(builtinName) {
         if (!builtins[builtinName]) {
@@ -631,6 +666,19 @@ export class Generador {
 
                 length = 4;
                 break;
+            
+            case 'arreglo':
+                
+                this.comment(`Pushing arreglo`);
+
+                // Guardar la dirección inicial del arreglo en T0
+                this.add(r.T0, r.SP, r.ZERO);
+
+                // Empujar la dirección del arreglo en el stack para referencias futuras
+                this.push(r.T0);
+
+                length = object.length; // Guardar el tamaño del arreglo completo
+                break;
 
 
             default:
@@ -646,7 +694,6 @@ export class Generador {
 
     popObject(rd = r.T0) {
         const object = this.objectStack.pop();
-        console.log(rd);
 
 
         switch (object.type) {
