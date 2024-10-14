@@ -1,5 +1,6 @@
 import { registers as r, floatRegisters as f} from "../constantes/constantes.js";
 import { Generador } from "../generador/generador.js";
+import { stringTo1ByteArray} from "../utils/utils.js";
 
 
 /**
@@ -411,6 +412,86 @@ export const mayorIgualFloat = (code) =>{
 }
 
 
+export const printNewLine=(code)=>{
+    code.comment('Imprimir salto de línea');
+    code.li(r.A0, 10);
+    code.li(r.A7, 11);
+    code.ecall();
+    code.comment('Fin imprimir salto de línea');
+}
+
+
+
+export const printBool = (code, rd = r.A0) => {
+    code.comment('Imprimir booleano');
+
+    // Guardar A0 si se está usando otro registro
+    if (rd !== r.A0) {
+        code.push(r.A0);             // Guardar A0 en el stack
+        code.add(r.A0, rd, r.ZERO);  // Mover el valor de rd a A0
+    }
+
+    const printTrue = code.newEtiquetaUnica('print_true');
+    const printFalse = code.newEtiquetaUnica('print_false');
+    const endPrintBool = code.newEtiquetaUnica('end_print_bool');
+
+    // Comparar si A0 es 1 (true)
+    code.li(r.T1, 1);                // Cargar 1 en T1
+    code.beq(r.A0, r.T1, printTrue); // Si A0 es 1, ir a imprimir "true"
+    code.j(printFalse);              // Si no, ir a imprimir "false"
+
+    // Sección para imprimir "true"
+    code.label(printTrue);
+    code.comment('Imprimir true');
+    pushString(code, "true");        // Cargar la cadena "true" en el heap
+    code.lw(r.A0, r.SP);             // Recuperar la dirección de "true"
+    code.addi(r.SP, r.SP, 4);        // Ajustar el puntero del stack
+    code.li(r.A7, 4);                // Código de syscall para imprimir una cadena
+    code.ecall();                    // Llamada de sistema
+
+    code.j(endPrintBool);            // Saltar al final
+
+    // Sección para imprimir "false"
+    code.label(printFalse);
+    code.comment('Imprimir false');
+    pushString(code, "false");       // Cargar la cadena "false" en el heap
+    code.lw(r.A0, r.SP);             // Recuperar la dirección de "false"
+    code.addi(r.SP, r.SP, 4);        // Ajustar el puntero del stack
+    code.li(r.A7, 4);                // Código de syscall para imprimir una cadena
+    code.ecall();                    // Llamada de sistema
+
+    // Fin de la impresión
+    code.label(endPrintBool);
+
+    // Restaurar A0 si fue modificado
+    if (rd !== r.A0) {
+        code.pop(r.A0);  // Recuperar el valor original de A0
+    }
+
+    code.comment('Fin imprimir booleano');
+};
+
+
+const pushString = (code, string) => {
+    const stringArray = stringTo1ByteArray(string); // Convierte a un arreglo de bytes ASCII
+
+    code.comment(`Pushing string: "${string}"`);
+    code.push(r.HP); // Guardar la dirección del heap en el stack
+
+    // Cargar cada carácter en el heap
+    stringArray.forEach((charCode) => {
+        code.li(r.T0, charCode);  // Cargar el código ASCII en T0
+        code.sb(r.T0, r.HP);      // Guardar el byte en el heap
+        code.addi(r.HP, r.HP, 1); // Mover el puntero del heap
+    });
+
+    // Agregar el terminador nulo (\0) al final
+    code.li(r.T0, 0);
+    code.sb(r.T0, r.HP);
+    code.addi(r.HP, r.HP, 1); // Avanzar en el heap para futuras inserciones
+};
+
+
 
 export const builtins = {
     concatString: concatString,
@@ -428,6 +509,7 @@ export const builtins = {
     menorQueFloat: menorQueFloat,
     menorIgualFloat: menorIgualFloat,
     mayorIgualFloat: mayorIgualFloat,
-
+    printNewLine: printNewLine,
+    printBool: printBool,
 
 }

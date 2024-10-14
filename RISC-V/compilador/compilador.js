@@ -443,7 +443,7 @@ export class CompilerVisitor extends BaseVisitor{
                 'int': () => this.code.printInt(),
                 'float':() => this.code.printFloat(),
                 'string': () => this.code.printString(),
-                'boolean': () => this.code.printBool(),
+                'boolean': () => this.code.callBuiltin('printBool'),
                 'char' : () => this.code.printChar(),
                 'null' : () => this.code.printNull(),
             };
@@ -457,7 +457,7 @@ export class CompilerVisitor extends BaseVisitor{
             
             // si es el ultimo del arreglo de expresiones, se imprime un salto de linea
             if(exp === node.exp[node.exp.length - 1]){
-                this.code.printNewLine();
+                this.code.callBuiltin('printNewLine');
             }
 
         });
@@ -553,7 +553,10 @@ export class CompilerVisitor extends BaseVisitor{
         node.cond.accept(this);
         
         // Pop the result of the condition into a register
-        this.code.popObject(r.T0); // El resultado de la condición está en T0 (1 o 0)
+
+        //verificar si es float, para usar los registros flotantes
+        const isFloat = this.code.getTopObject().type === 'float';
+        this.code.popObject(isFloat ? f.FT0 : r.T0); // El resultado de la condición está en T0 (1 o 0)
 
         // Generar etiquetas únicas para manejar el flujo
         const labelTrue = this.code.newEtiquetaUnica('if_true');
@@ -612,7 +615,8 @@ export class CompilerVisitor extends BaseVisitor{
         node.cond.accept(this);
 
         // Pop the result of the condition into a register
-        this.code.popObject(r.T0); // El resultado de la condición está en T0 (1 o 0)
+        const isFloat = this.code.getTopObject().type === 'float';
+        this.code.popObject(isFloat ? f.FT0 : r.T0);
 
         // Si T0 es falso (0), saltar al final del bucle
         this.code.comment('Comparación de While');
@@ -669,7 +673,8 @@ export class CompilerVisitor extends BaseVisitor{
         node.cond.accept(this);
 
         // Pop the result of the condition into a register
-        this.code.popObject(r.T0); // El resultado de la condición está en T0 (1 o 0)
+        const isFloat = this.code.getTopObject().type === 'float';
+        this.code.popObject(isFloat ? f.FT0 : r.T0);
 
         // Si T0 es falso (0), saltar al final del bucle
         this.code.comment('Comparación de For');
@@ -689,7 +694,7 @@ export class CompilerVisitor extends BaseVisitor{
         // Incremento
         this.code.label(this.labelContinue);
         node.inc.accept(this);
-        this.code.popObject(r.T0); // Para que no quede en la pila
+        this.code.popObject(isFloat ? f.FT0 : r.T0); // Para que no quede en la pila
 
         // Saltar al inicio para reevaluar la condición
         this.code.j(labelStart);
@@ -721,7 +726,8 @@ export class CompilerVisitor extends BaseVisitor{
 
         // Evaluar la expresión del switch y guardar el valor en T0
         node.exp.accept(this);
-        this.code.popObject(r.T0); // El valor del switch está en T0
+        const isFloat = this.code.getTopObject().type === 'float';
+        this.code.popObject(isFloat ? f.FT0 : r.T0); // El valor del switch está en T0
 
         // Copiar el valor de la expresión en t1
         this.code.comment('Copiar el valor de la expresión en t1');
@@ -741,7 +747,8 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.comment(`Caso ${index + 1}`);
 
             caseNode.exp.accept(this);
-            this.code.popObject(r.T0); // El valor del case está en T0
+            const isFloat = this.code.getTopObject().type === 'float';
+            this.code.popObject(isFloat ? f.FT0 : r.T0); // El valor del case está en T0
 
             // Si coincide, saltar a este case
             this.code.beq(r.T1, r.T0, caseLabels[index]);
