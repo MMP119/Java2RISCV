@@ -1,4 +1,4 @@
-import { registers as r } from "../constantes/constantes.js";
+import { registers as r, floatRegisters as f} from "../constantes/constantes.js";
 import { Generador } from "../generador/generador.js";
 
 
@@ -111,6 +111,30 @@ export const igualdad = (code) => {
 }
 
 
+export const igualdadFloat = (code) =>{
+
+    //Generar etiquetas únicas
+    let labelTrue = code.newEtiquetaUnica('set_true');
+    let labelFalse = code.newEtiquetaUnica('set_false');
+    let end_comparison = code.newEtiquetaUnica('end_comparison');
+
+    code.comment('Comparación igualdad de flotantes');
+    // Si son iguales, setear a true (1)
+    code.feqs(r.T0, f.FT1, f.FT0);
+    code.beq(r.T0, r.ZERO, labelFalse);
+    code.j(labelTrue);
+    code.label(labelTrue);
+    code.li(r.T0, 1); // se agina true a t0
+    code.j(end_comparison)
+    code.label(labelFalse);
+    code.li(r.T0, 0); // se asigna false a t1
+    code.label(end_comparison);
+    code.push(r.T0);
+    code.comment('Fin Comparación igualdad de flotantes');
+
+}
+
+
 export const desigualdadStrings = (code) => {
 
     // Inicializar comparacion de strings
@@ -179,6 +203,30 @@ export const desigualdad = (code) => {
 }
 
 
+export const desigualdadFloat = (code) =>{
+
+    //Generar etiquetas únicas
+    let labelTrue = code.newEtiquetaUnica('set_true');
+    let labelFalse = code.newEtiquetaUnica('set_false');
+    let end_comparison = code.newEtiquetaUnica('end_comparison');
+
+    code.comment('Comparación desigualdad de flotantes');
+    // Si son diferentes, setear a true (1)
+    code.feqs(r.T0, f.FT1, f.FT0);
+    code.beq(r.T0, r.ZERO, labelTrue);
+    code.j(labelFalse);
+    code.label(labelTrue);
+    code.li(r.T0, 1); // se agina true a t0
+    code.j(end_comparison)
+    code.label(labelFalse);
+    code.li(r.T0, 0); // se asigna false a t1
+    code.label(end_comparison);
+    code.push(r.T0);
+    code.comment('Fin Comparación desigualdad de flotantes');
+
+}
+
+
 export const mayorQue = (code) =>{
     //Generar etiquetas únicas
     let labelTrue = code.newEtiquetaUnica('set_true');
@@ -201,6 +249,30 @@ export const mayorQue = (code) =>{
 }
 
 
+export const mayorQueFloat = (code) =>{
+
+    //Generar etiquetas únicas
+    let labelTrue = code.newEtiquetaUnica('set_true');
+    let labelFalse = code.newEtiquetaUnica('set_false');
+    let end_comparison = code.newEtiquetaUnica('end_comparison');
+
+    code.comment('Comparación mayor que flotante');
+    // Si es mayor, setear a true (1)
+    code.flts(r.T0, f.FT0, f.FT1);  //f1 < f0 si f1 es mayor que f0, es falso ya que está al revés para comparar si f1 es mayor que f0
+    code.beq(r.T0, r.ZERO, labelFalse);
+    code.j(labelTrue);
+    code.label(labelTrue);
+    code.li(r.T0, 1); // se agina true a t0
+    code.j(end_comparison)
+    code.label(labelFalse);
+    code.li(r.T0, 0); // se asigna false a t1
+    code.label(end_comparison);
+    code.push(r.T0);
+    code.comment('Fin Comparación mayor que flotante');
+
+}
+
+
 export const menorQue = (code) =>{
     //Generar etiquetas únicas
     let labelTrue = code.newEtiquetaUnica('set_true');
@@ -219,6 +291,29 @@ export const menorQue = (code) =>{
     code.label(end_comparison);
     code.push(r.T0);
     code.comment('Fin Comparación menor que');
+
+}
+
+export const menorQueFloat = (code) =>{
+
+    //Generar etiquetas únicas
+    let labelTrue = code.newEtiquetaUnica('set_true');
+    let labelFalse = code.newEtiquetaUnica('set_false');
+    let end_comparison = code.newEtiquetaUnica('end_comparison');
+
+    code.comment('Comparación menor que flotante');
+    // Si es menor, setear a true (1)
+    code.flts(r.T0, f.FT1, f.FT0);
+    code.beq(r.T0, r.ZERO, labelFalse);
+    code.j(labelTrue);
+    code.label(labelTrue);
+    code.li(r.T0, 1); // se agina true a t0
+    code.j(end_comparison)
+    code.label(labelFalse);
+    code.li(r.T0, 0); // se asigna false a t1
+    code.label(end_comparison);
+    code.push(r.T0);
+    code.comment('Fin Comparación menor que flotante');
 
 }
 
@@ -246,6 +341,30 @@ export const menorIgual = (code) =>{
 }
 
 
+export const menorIgualFloat = (code) =>{
+
+    //Generar etiquetas únicas
+    let labelTrue = code.newEtiquetaUnica('set_true');
+    let labelFalse = code.newEtiquetaUnica('set_false');
+    let end_comparison = code.newEtiquetaUnica('end_comparison');
+
+    code.comment('Comparación menor o igual que flotante');
+    // Si es menor o igual, setear a true (1)
+    code.fles(r.T0, f.FT1, f.FT0);
+    code.beq(r.T0, r.ZERO, labelFalse);
+    code.j(labelTrue);
+    code.label(labelTrue);
+    code.li(r.T0, 1); // se agina true a t0
+    code.j(end_comparison)
+    code.label(labelFalse);
+    code.li(r.T0, 0); // se asigna false a t1
+    code.label(end_comparison);
+    code.push(r.T0);
+    code.comment('Fin Comparación menor o igual que flotante');
+
+}
+
+
 export const mayorIgual = (code) =>{
 
     //Generar etiquetas únicas
@@ -268,6 +387,29 @@ export const mayorIgual = (code) =>{
 }
 
 
+export const mayorIgualFloat = (code) =>{
+
+    //Generar etiquetas únicas
+    let labelTrue = code.newEtiquetaUnica('set_true');
+    let labelFalse = code.newEtiquetaUnica('set_false');
+    let end_comparison = code.newEtiquetaUnica('end_comparison');
+
+    code.comment('Comparación mayor o igual que flotante');
+    // Si es mayor o igual, setear a true (1)
+    code.fles(r.T0, f.FT0, f.FT1);
+    code.beq(r.T0, r.ZERO, labelFalse);
+    code.j(labelTrue);
+    code.label(labelTrue);
+    code.li(r.T0, 1); // se agina true a t0
+    code.j(end_comparison)
+    code.label(labelFalse);
+    code.li(r.T0, 0); // se asigna false a t1
+    code.label(end_comparison);
+    code.push(r.T0);
+    code.comment('Fin Comparación mayor o igual que flotante');
+
+}
+
 
 
 export const builtins = {
@@ -279,6 +421,13 @@ export const builtins = {
     menorIgual: menorIgual,
     mayorIgual: mayorIgual,
     mayorQue: mayorQue,
-    menorQue: menorQue
+    menorQue: menorQue,
+    igualdadFloat: igualdadFloat,
+    desigualdadFloat: desigualdadFloat,
+    mayorQueFloat: mayorQueFloat,
+    menorQueFloat: menorQueFloat,
+    menorIgualFloat: menorIgualFloat,
+    mayorIgualFloat: mayorIgualFloat,
+
 
 }

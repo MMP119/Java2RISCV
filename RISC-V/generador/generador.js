@@ -1,5 +1,5 @@
 import { registers as r } from "../constantes/constantes.js";
-import { stringTo1ByteArray, stringTo32BitsArray } from "../utils/utils.js";
+import { stringTo1ByteArray, numberToF32 } from "../utils/utils.js";
 import { builtins } from "../utils/builtins.js";
 
 class Instruction {
@@ -398,14 +398,89 @@ export class Generador {
 
     //-------------------------------------------------------------------------------------------------------
 
+
+    // operaciones con flotantes
+    fadd(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('fadd.s', rd, rs1, rs2))
+    }
+
+    fsub(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('fsub.s', rd, rs1, rs2))
+    }
+
+    fmul(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('fmul.s', rd, rs1, rs2))
+    }
+
+    fdiv(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('fdiv.s', rd, rs1, rs2))
+    }
+
+    frem(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('frem.s', rd, rs1, rs2))
+    }
+
+    fli(rd, inmediato) {
+        this.instrucciones.push(new Instruction('fli.s', rd, inmediato))
+    }
+
+    fmv(rd, rs1) {
+        this.instrucciones.push(new Instruction('fmv.s', rd, rs1))
+    }
+
+    flw(rd, rs1, inmediato = 0) {
+        this.instrucciones.push(new Instruction('flw', rd, `${inmediato}(${rs1})`))
+    }
+
+    fsw(rs1, rs2, inmediato = 0) {
+        this.instrucciones.push(new Instruction('fsw', rs1, `${inmediato}(${rs2})`))
+    }
+
+    fcvtsw(rd, rs1) { //convertir de entero a float
+        this.instrucciones.push(new Instruction('fcvt.s.w', rd, rs1))
+    }
+
+    feqs(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('feq.s', rd, rs1, rs2))
+    }
+
+    flts(rd, rs1, rs2) { //menor que floats
+        this.instrucciones.push(new Instruction('flt.s', rd, rs1, rs2))
+    }
+
+    fles(rd, rs1, rs2) {
+        this.instrucciones.push(new Instruction('fle.s', rd, rs1, rs2))
+    }
+
+    printFloat() {
+        this.li(r.A7, 2)
+        this.ecall()
+    }
+
+    fmvxw(rd, rs1) { //pasar el float en su representacion en binario
+        this.instrucciones.push(new Instruction('fmv.x.w', rd, rs1))
+    }
+
+    //---------------------------------------------------------------------------------------------------------
+
+
     push(rd = r.T0) {
         this.addi(r.SP, r.SP, -4) // 4 bytes = 32 bits
         this.sw(rd, r.SP)
     }
 
+    pushFloat(rd = r.FT0) {
+        this.addi(r.SP, r.SP, -4) // 4 bytes = 32 bits
+        this.fsw(rd, r.SP)
+    }
 
     pop(rd = r.T0) {
         this.lw(rd, r.SP)
+        this.addi(r.SP, r.SP, 4)
+    }
+    
+    popFloat(rd = r.FT0) {
+        this.flw(rd, r.SP)
         this.addi(r.SP, r.SP, 4)
     }
 
@@ -580,20 +655,21 @@ export class Generador {
                 length = 4;
                 break;
 
+            case 'float':
+                const ieee754 = numberToF32(object.valor);
+                this.li(r.T0, ieee754);
+                this.push(r.T0);
+                length = 4;
+                break;
+
             case 'string':
                 const stringArray = stringTo1ByteArray(object.valor);
 
                 this.comment(`Pushing string ${object.valor}`);
-                // this.addi(r.T0, r.HP, 4);
-                // this.push(r.T0);
                 this.push(r.HP);
 
                 stringArray.forEach((charCode) => {
                     this.li(r.T0, charCode);
-                    // this.push(r.T0);
-                    // this.addi(r.HP, r.HP, 4);
-                    // this.sw(r.T0, r.HP);
-
                     this.sb(r.T0, r.HP);
                     this.addi(r.HP, r.HP, 1);
                 });
@@ -641,11 +717,16 @@ export class Generador {
 
     popObject(rd = r.T0) {
         const object = this.objectStack.pop();
+        console.log(rd);
 
 
         switch (object.type) {
             case 'int':
                 this.pop(rd);
+                break;
+
+            case 'float':
+                this.popFloat(rd);
                 break;
 
             case 'string':
@@ -669,6 +750,10 @@ export class Generador {
         }
 
         return object;
+    }
+
+    getTopObject(){
+        return this.objectStack[this.objectStack.length - 1];
     }
 
     /*
