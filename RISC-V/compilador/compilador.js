@@ -2,7 +2,7 @@ import { registers as r, floatRegisters as f } from "../constantes/constantes.js
 import { Generador } from "../generador/generador.js";
 import { BaseVisitor} from "../compilador/visitor.js"
 import { registrarError } from "../../interprete/global/errores.js";
-
+import { stringTo1ByteArray } from "../utils/utils.js";
 
 export class CompilerVisitor extends BaseVisitor{
 
@@ -164,6 +164,7 @@ export class CompilerVisitor extends BaseVisitor{
 
             this.code.tagObject(idArreglo);
             this.code.comment(`Fin Declaracion de arreglo con valores explicitos`);
+
         
         }else if(idArreglo2 === null && !Array.isArray(exp)){
             //caso 2, arreglos con valores por defecto como int [] a = new int[5];
@@ -171,49 +172,72 @@ export class CompilerVisitor extends BaseVisitor{
             
             this.code.comment('Declaracion de arreglo con valores por defecto');
 
+            exp.accept(this); 
+
+            const isValueFloat = this.code.getTopObject().type === 'float';
+            this.code.popObject(isValueFloat ? f.FT0 : r.T0);
+
+            this.code.comment(`Reservando ${r.T1} bytes en el stack para ${node.id}`);
+
+            const size = exp.valor * 4; // ocupa 4 bytes
+
+            this.code.addi(r.SP, r.SP, -size); // Reservar espacio en la pila
+
+            this.code.pushContant({ type: 'arreglo', length: size, typeObjects: tipoArreglo });
+
             let valorPorDefecto = null;
 
-            switch(tipo2){
+            //para inicializar el arreglo con valores por defecto
+            for (let i = 0; i < exp.valor; i++) {
+                const offset = i * 4; // Desplazamiento en memoria
 
-                case 'int':
-                    console.log("int");
-                    valorPorDefecto = 0;
-                    break;
+                switch(tipo2){
 
-                case 'float':
-                    console.log("float");
-                    valorPorDefecto = 0.0;
-                    break;
-
-                case 'string':
-                    console.log("string");
-                    valorPorDefecto = "";
-                    break;
-
-                case 'boolean':
-                    console.log("boolean");
-                    valorPorDefecto = false;
-                    break;
-
-                case 'char':
-                    console.log("char");
-                    valorPorDefecto = '\u0000';
-                    break;
-
-                default:
-                    registrarError('Semántico', `Tipo de dato no soportado declaracion de arreglo`, node.location.start.line, node.location.start.column);
-                    throw new Error(`Tipo de dato no soportado declaracion de arreglo`);
-
+                    case 'int':
+                        this.code.li(r.T0, 0); // Cargar el valor por defecto en un registro temporal
+                        this.code.sw(r.T0, r.SP, offset); // Guardar el valor en memoria
+                        break;
+    
+                    case 'float':
+                        this.code.li(r.T0, 0.0); // Cargar el valor por defecto en un registro temporal
+                        this.code.fcvtsw(f.FT0, r.T0); // Convertir el entero a float
+                        this.code.fsw(f.FT0, r.SP, offset); // Guardar el valor en memoria
+                        break;
+    
+                    case 'string':
+                        // Inicializar con un string vacío ('\0')
+                        this.code.comment('Inicializando string vacío');
+                        this.code.addi(r.T0, r.HP, 0); // T0 apunta al heap (string vacío)
+                        this.code.sb(r.ZERO, r.HP, 0); // Almacenar \0 en el heap
+                        this.code.addi(r.HP, r.HP, 1); // Avanzar el heap
+                        this.code.sw(r.T0, r.SP, offset); // Guardar puntero en memoria
+                        break;
+                    
+                    case 'char':
+                        this.code.li(r.T0, 0); // Cargar el valor por defecto en un registro temporal
+                        this.code.sw(r.T0, r.SP, offset); // Guardar el valor en memoria
+                        break;
+    
+                    case 'boolean':
+                        this.code.li(r.T0, 0); // Cargar el valor por defecto en un registro temporal
+                        this.code.sw(r.T0, r.SP, offset); // Guardar el valor en memoria
+                        break;
+    
+                    default:
+                        registrarError('Semántico', `Tipo de dato no soportado declaracion de arreglo`, node.location.start.line, node.location.start.column);
+                        throw new Error(`Tipo de dato no soportado declaracion de arreglo`);
+    
+                }
             }
 
+            this.code.tagObject(idArreglo);
             this.code.comment(`Fin Declaracion de arreglo con valores por defecto`);
 
-        }else if(exp === null){
-            //caso 3, copia de arreglo como int [] a = b;, b es otro arreglo     
-            console.log("caso 3");   
+        }else if (exp === null) {
+            // Caso 3: Copia de arreglo (int[] a = b;)
+            this.code.comment('Declaracion de arreglo con copia de otro arreglo');
         
-        
-        
+            this.code.comment('Fin Declaracion de arreglo con copia de otro arreglo');
         }
 
         this.code.comment(`Fin Declaracion de arreglo: ${node.id}`);
