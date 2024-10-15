@@ -1,4 +1,4 @@
-import { registers as r } from "../constantes/constantes.js";
+import { registers as r ,  floatRegisters as f} from "../constantes/constantes.js";
 import { stringTo1ByteArray, numberToF32 } from "../utils/utils.js";
 import { builtins } from "../utils/builtins.js";
 
@@ -452,9 +452,22 @@ export class Generador {
         this.instrucciones.push(new Instruction('fle.s', rd, rs1, rs2))
     }
 
-    printFloat() {
+    printFloat(rd = f.FA0) {
+
+        if (rd !== f.FA0) {
+            this.pushFloat(f.FA0)
+            this.fmv(f.FA0, rd)
+        }else{
+            this.fmv(f.FA0, rd)
+        }
+
         this.li(r.A7, 2)
         this.ecall()
+
+        if (rd !== f.FA0) {
+            this.popFloat(f.FA0)
+        }
+        
     }
 
     fmvxw(rd, rs1) { //pasar el float en su representacion en binario
@@ -549,6 +562,7 @@ export class Generador {
 
     printArreglo(arreglo) {
         const { length } = arreglo;
+        const {typeObjects} = arreglo;
         const elementCount = length / 4; // Asumiendo 4 bytes por elemento
     
         this.comment(`Print Arreglo`);
@@ -558,17 +572,50 @@ export class Generador {
         this.printChar();
     
         // Recuperar la dirección del arreglo desde el stack
-        this.pop(r.T1); // T0 tiene la dirección del arreglo
+        this.pop(r.T1); // T1, tiene la dirección del arreglo, por lo de referencia de variable
     
         for (let i = 0; i < elementCount; i++) {
             const offset = i * 4;
+
+            if(typeObjects === 'float'){
+                // Cargar el elemento desde la memoria relativa a T1
+                this.flw(f.FT1, r.T0, offset);
+                this.printFloat(f.FT1);
+
+            }else{
+                // Cargar el elemento desde la memoria relativa a T1
+                this.lw(r.T1, r.T0, offset);
+
     
-            // Cargar el elemento desde la memoria relativa a T0
-            this.lw(r.T1, r.T0, offset);
-    
-            // Imprimir el valor como entero (ajustar según el tipo si es necesario)
-            this.printInt(r.T1);
-    
+                // Imprimir el valor como entero (ajustar según el tipo si es necesario)
+                switch(typeObjects){
+
+                    case 'int':
+                        this.printInt(r.T1);
+                        break;
+
+                    case 'string':
+                        this.printString(r.T1);
+                        break;
+
+                    case 'boolean':
+                        this.printInt(r.T1);
+                        break;
+                    
+                    case 'char':
+                        this.printChar(r.T1);
+                        break;
+
+                    case 'null':
+                        this.printNull(r.T1);
+                        break;
+                    
+                    default:
+                        break;
+                }
+
+            }
+            
             // Imprimir coma y espacio si no es el último elemento
             if (i < elementCount - 1) {
                 this.li(r.A0, 44); // ASCII para ','
@@ -678,8 +725,8 @@ export class Generador {
                 this.push(r.T0);
 
                 length = object.length; // Guardar el tamaño del arreglo completo
-                break;
-
+                this.pushObject({ type: object.type, length, depth: this.depth, typeObjects: object.typeObjects });
+                return;
 
             default:
                 break;

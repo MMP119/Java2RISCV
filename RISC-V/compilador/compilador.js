@@ -144,7 +144,7 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.addi(r.SP, r.SP, -size); // Reservar espacio en la pila
             this.code.comment(`Reservando ${size} bytes en el stack para ${node.id}`);
 
-            this.code.pushContant({ type: 'arreglo', length: size });
+            this.code.pushContant({ type: 'arreglo', length: size, typeObjects: tipoArreglo });
 
             //guardar cada valor del arreglo en memoria
             exp.forEach((valor, index) => {
