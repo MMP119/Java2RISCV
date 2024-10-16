@@ -314,8 +314,7 @@ export class CompilerVisitor extends BaseVisitor{
 
                 this.code.comment(`Metodo join`);
                 node.id.accept(this);
-                const isFloat = this.code.getTopObject().type === 'float'; 
-                const object = this.code.popObject(isFloat ? f.FT0 : r.T0);
+                const object = this.code.getTopObject();
                 this.code.pushObject({ type: 'printArregloJoin', length:object.length, typeObjects: object.typeObjects });
                 this.code.comment(`Fin Metodo join`);
 
