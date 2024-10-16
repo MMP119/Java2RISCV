@@ -336,7 +336,7 @@ StructInstancia = primero:(id:Identificador _ ":" _ exp:(exp:Expresion{return ex
     }
 
 
-ArrayFunc = id:Identificador _ "." _ method:("indexOf"/"join"/"length") _ exp:("(" _  exp:Expresion? _ ")" {return exp})? {return crearNodo('arrayFunc', { id, method, exp })} 
+ArrayFunc = id1:Identificador _ "." _ method:("indexOf"/"join"/"length") _ exp:("(" _  exp:Expresion? _ ")" {return exp})? {return crearNodo('arrayFunc', { id: crearNodo('referenciaVariable', { id:id1 }), method, exp })} 
     
     / id:Identificador _ "[" _ index:Expresion _ "]" _ "=" _ value:Expresion      {return crearNodo('arrayFunc', { id, method:'setElement', exp:[index, value]});} 
     

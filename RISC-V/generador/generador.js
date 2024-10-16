@@ -488,8 +488,10 @@ export class Generador {
     }
 
     pop(rd = r.T0) {
+        this.comment(`Pop`);
         this.lw(rd, r.SP)
         this.addi(r.SP, r.SP, 4)
+        this.comment(`fin Pop`);
     }
     
     popFloat(rd = r.FT0) {
@@ -630,6 +632,70 @@ export class Generador {
         this.printChar();
     }
 
+
+    printArregloJoin(arreglo) {
+        const { length } = arreglo;
+        const {typeObjects} = arreglo;
+        const elementCount = length / 4; // Asumiendo 4 bytes por elemento
+    
+        this.comment(`Print JOIN`);
+    
+        // Recuperar la dirección del arreglo desde el stack
+        this.pop(r.T1); // T1, tiene la dirección del arreglo, por lo de referencia de variable
+    
+        for (let i = 0; i < elementCount; i++) {
+            const offset = i * 4;
+
+            if(typeObjects === 'float'){
+                // Cargar el elemento desde la memoria relativa a T1
+                this.flw(f.FT1, r.T0, offset);
+                this.printFloat(f.FT1);
+
+            }else{
+                // Cargar el elemento desde la memoria relativa a T1
+                this.lw(r.T1, r.T0, offset);
+
+    
+                // Imprimir el valor como entero (ajustar según el tipo si es necesario)
+                switch(typeObjects){
+
+                    case 'int':
+                        this.printInt(r.T1);
+                        break;
+
+                    case 'string':
+                        this.printString(r.T1);
+                        break;
+
+                    case 'boolean':
+                        this.printInt(r.T1);
+                        break;
+                    
+                    case 'char':
+                        this.printChar(r.T1);
+                        break;
+
+                    case 'null':
+                        this.printNull(r.T1);
+                        break;
+                    
+                    default:
+                        break;
+                }
+
+            }
+            
+            // Imprimir coma y espacio si no es el último elemento
+            if (i < elementCount - 1) {
+                this.li(r.A0, 44); // ASCII para ','
+                this.printChar();
+                this.li(r.A0, 32); // ASCII para ' '
+                this.printChar();
+            }
+        }
+
+    }
+
     callBuiltin(builtinName) {
         if (!builtins[builtinName]) {
             throw new Error(`Builtin ${builtinName} not found`)
@@ -745,31 +811,48 @@ export class Generador {
 
     popObject(rd = r.T0) {
         const object = this.objectStack.pop();
-
-
+        
         switch (object.type) {
             case 'int':
+                this.comment(`Poping int`);
                 this.pop(rd);
+                this.comment(`fin Poped int `);
                 break;
 
             case 'float':
+                this.comment(`Poping float`);
                 this.popFloat(rd);
+                this.comment(`fin Poped float`);
                 break;
 
             case 'string':
+                this.comment(`Poping string`);
                 this.pop(rd);
+                this.comment(`fin Poped string`);
                 break;
 
             case 'boolean':
+                this.comment(`Poping boolean`);
                 this.pop(rd);
+                this.comment(`fin Poped boolean`);
                 break;
 
             case 'char':
+                this.comment(`Poping char`);
                 this.pop(rd);
+                this.comment(`fin Poped char`);
                 break;
             
             case 'null':
+                this.comment(`Poping null`);
                 this.pop(rd);
+                this.comment(`fin Poped nul`);
+                break;
+            
+            case 'arreglo':
+                this.comment(`Poping arreglo`);
+                this.pop(rd);
+                this.comment(`fin Poped arreglo`);
                 break;
 
             default:

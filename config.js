@@ -16,3 +16,5 @@ module.exports = {
 }
 
 // corre con el comando npx peggy -c ./config.js
+
+//npx peggy .\analizador.pegjs --format=es --dependencies='{\"nodos\": \"../compilador/nodos.js\"}'
