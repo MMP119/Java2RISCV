@@ -252,63 +252,60 @@ export class CompilerVisitor extends BaseVisitor{
 
         switch (node.method) {
         
-            case 'indexOf': // Retorna el índice de la primera coincidencia, o -1 si no existe
+            case 'indexOf': // Retorna el índice de la primera coincidencia o -1 si no existe
                 this.code.comment(`Metodo indexOf`);
+                
+                node.exp.accept(this); //el valor a buscar está en r.T0
+                //mover el valor a buscar a t5
+                this.code.mv(r.T5, r.T0);
+                
+                node.id.accept(this); //el arreglo está en r.T1
+                const arregloInfo = this.code.getTopObject();
+                const size = arregloInfo.length / 4;
+                this.code.pop(r.T1) //queda libre el registro t1
 
-                // // Obtener referencia del arreglo (en r.T1)
-                // node.id.accept(this);
+                // Crear etiquetas
+                const labelStart = this.code.newEtiquetaUnica('indexOf_start');
+                const labelFound = this.code.newEtiquetaUnica('indexOf_found');
+                const labelEnd = this.code.newEtiquetaUnica('indexOf_end');
 
-                // // Obtener el valor a buscar (en r.T0 o f.FT0 si es flotante)
-                // node.exp.accept(this);
-                // const isValueFloat = this.code.getTopObject().type === 'float';
-                // this.code.popObject(isValueFloat ? f.FT0 : r.T0); // Valor a buscar
+                this.code.li(r.T2, 0); //contador en t2 (indice)
+                //carger -1 en t3
+                this.code.li(r.T3, 1);
+                this.code.li(r.T4, 0);
+                this.code.sub(r.T3, r.T4, r.T3); //t3 = -1
+                
+                this.code.label(labelStart);
+                this.code.li(r.T4, size); //tamaño del arreglo en t4
+                this.code.bge(r.T2, r.T4, labelEnd); //si t2 >= t4, salta al final
 
-                // // Inicializar registros
-                // this.code.li(r.T2, 0);  // Índice del bucle en T2 (inicia en 0)
-                // this.code.li(r.T3, -1); // Valor por defecto (-1 si no se encuentra)
-                // const object = this.code.getTopObject();
-                // const elementCount = object.length / 4; // Número de elementos
+                //calcular el offset y sumar al puntero base del arreglo
+                this.code.li(r.T4, 4);
+                this.code.mul(r.T4, r.T4, r.T2);
+                this.code.add(r.T0, r.T0, r.T4);
 
-                // const labelStart = this.code.newEtiquetaUnica('indexOf_start');
-                // const labelFound = this.code.newEtiquetaUnica('indexOf_found');
-                // const labelEnd = this.code.newEtiquetaUnica('indexOf_end');
+                //cargar el valor del arreglo en t1, los valores vienen en bloques de 4 bytes desde r.t0
+                this.code.lw(r.T1, r.T0, 0); 
 
-                // // Recorrer el arreglo
-                // this.code.label(labelStart);
+                this.code.sub(r.T0, r.T0, r.T4); //regresar a la posición original
 
-                // // Verificar si hemos terminado el recorrido
-                // this.code.li(r.A3, elementCount);  // Cargar la cantidad de elementos
-                // this.code.bge(r.T2, r.A3, labelEnd);  // Si índice >= cantidad, terminar
+                //comparar el valor del arreglo con el valor a buscar
+                this.code.beq(r.T1, r.T5, labelFound); //si son iguales, salta a la etiqueta de encontrado
 
-                // // Calcular offset: offset = índice * 4
-                // this.code.li(r.A3, 4);  // Cargar 4 (tamaño de un elemento)
-                // this.code.mul(r.T4, r.T2, r.A3);  // Calcular el offset
 
-                // // Cargar el valor del arreglo en un registro temporal
-                // if (isValueFloat) {
-                //     this.code.flw(f.FT1, r.T1, r.T4);  // Cargar float
-                //     //this.code.feq.s(r.T5, f.FT0, f.FT1);  // Comparar floats
-                //     this.code.bnez(r.T5, labelFound);  // Si es igual, saltar a 'found'
-                // } else {
-                //     this.code.lw(r.T5, r.T1, r.T4);  // Cargar int
-                //     this.code.beq(r.T5, r.T0, labelFound);  // Si es igual, saltar a 'found'
-                // }
+                this.code.addi(r.T2, r.T2, 1); //incrementar el contador
+                this.code.j(labelStart); //saltar al inicio
 
-                // // Incrementar el índice y continuar el bucle
-                // this.code.addi(r.T2, r.T2, 1);  
-                // this.code.j(labelStart);  // Volver al inicio del bucle
+                this.code.label(labelFound);
+                this.code.mv(r.T3, r.T2); //guardar el indice en t3
+                this.code.j(labelEnd); //saltar al final
 
-                // // Si se encuentra el valor
-                // this.code.label(labelFound);
-                // this.code.mv(r.T3, r.T2);  // Guardar el índice encontrado en T3
+                this.code.label(labelEnd);
+                this.code.push(r.T3);
+                this.code.pushObject({ type: 'int', length: 4});
 
-                // // Fin del bucle
-                // this.code.label(labelEnd);
-                // this.code.mv(r.T0, r.T3);  // Guardar el resultado en T0 (-1 o índice)
                 this.code.comment(`Fin Metodo indexOf`);
-
                 break;
-
 
             case 'join': //Une todos los elementos del array en un string, separado por comas Ej: [1,2,3]-> “1,2,3”
 
