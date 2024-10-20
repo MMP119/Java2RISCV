@@ -429,23 +429,11 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '/':
-
-                if(der.valor == 0){
-                    registrarError('Semántico', 'Error: División por cero.',node.location.start.line, node.location.start.column);
-                    throw new Error('Error: División por cero. Línea: ' + node.location.start.line + ', Columna: ' + node.location.start.column);
-                }
-
                 this.code.div(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
                 this.code.pushObject({ type: 'int', length: 4 });
                 break;
-            case '%':
-
-                if(der.valor == 0){
-                    registrarError('Semántico', 'Error: División por cero.',node.location.start.line, node.location.start.column);
-                    throw new Error('Error: División por cero. Línea: ' + node.location.start.line + ', Columna: ' + node.location.start.column);
-                }
-                
+            case '%':               
                 this.code.rem(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
                 this.code.pushObject({ type: 'int', length: 4 });

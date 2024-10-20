@@ -44,6 +44,11 @@ export class Relacionales{
                     return {tipo: 'boolean', valor: resultado};
                 }
 
+                if(this.izq.tipo === 'boolean' && this.der.tipo === 'boolean'){
+                    const resultado = this.izq.valor === this.der.valor;
+                    return {tipo: 'boolean', valor: resultado};
+                }
+
                 registrarError('Semántico', `Operación no soportada en la igualdad`, node.location.start.line, node.location.start.column);
                 return {tipo: 'Error', valor: null};
             
@@ -74,6 +79,11 @@ export class Relacionales{
                 }
 
                 if(this.izq.tipo === 'char' && this.der.tipo === 'char'){
+                    const resultado = this.izq.valor !== this.der.valor;
+                    return {tipo: 'boolean', valor: resultado};
+                }
+
+                if(this.izq.tipo === 'boolean' && this.der.tipo === 'boolean'){
                     const resultado = this.izq.valor !== this.der.valor;
                     return {tipo: 'boolean', valor: resultado};
                 }

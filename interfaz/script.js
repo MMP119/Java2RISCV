@@ -99,14 +99,14 @@ document.getElementById('runButton').addEventListener('click', () => {
         //let output = interpretacion.salida;
         let output = "";
         const erroes = obtenerErrores();
-        if(erroes.length > 0){
+        //if(erroes.length > 0){
             output += '-------------->    ERROR FATAL, NO SE PUEDE COMPILAR   <--------------\n\n';
             output += '\n\n============================== ERRORES ==============================\n';
             erroes.forEach(error => {
                 output += `Error: ${error.mensaje}\nLínea: ${error.linea}, Columna: ${error.columna}\n`;
             });
             consoleEditor.setValue(output);
-        }else{
+        //}else{
 
                 const astCompiler = parseCompiler(code); // analizar el código
 
@@ -118,7 +118,7 @@ document.getElementById('runButton').addEventListener('click', () => {
 
                 consoleEditor.setValue(output);
     
-            }     
+            //}     
 
     } catch (e) {
         if (e.name === 'SyntaxError') {
