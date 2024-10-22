@@ -562,139 +562,106 @@ export class Generador {
         }
     }
 
-    printArreglo(arreglo) {
-        const { length } = arreglo;
-        const {typeObjects} = arreglo;
-        const elementCount = length / 4; // Asumiendo 4 bytes por elemento
     
-        this.comment(`Print Arreglo`);
-    
-        // Imprimir apertura del arreglo: "["
+    printArray(arrayObject) {
+        const length = arrayObject.length / 4; // Número de elementos
+        const {typeObjects} = arrayObject;
+
+        this.comment(`Imprimiendo arreglo de longitud ${length}`);
+
         this.li(r.A0, 91); // ASCII para '['
         this.printChar();
     
-        // Recuperar la dirección del arreglo desde el stack
-        this.pop(r.T1); // T1, tiene la dirección del arreglo, por lo de referencia de variable
+        // T0 ya tiene la dirección base del arreglo; no hace falta hacer pop.
     
-        for (let i = 0; i < elementCount; i++) {
-            const offset = i * 4;
-
+        for (let i = 0; i < length; i++) {
+            const offset = i * 4; // Offset del elemento en bytes
+    
             if(typeObjects === 'float'){
-                // Cargar el elemento desde la memoria relativa a T1
+
+                // Cargar el elemento desde la memoria relativa a T0
                 this.flw(f.FT1, r.T0, offset);
                 this.printFloat(f.FT1);
 
             }else{
-                // Cargar el elemento desde la memoria relativa a T1
+
+                // Acceder al valor del elemento usando la dirección base en T0
                 this.lw(r.T1, r.T0, offset);
 
-    
-                // Imprimir el valor como entero (ajustar según el tipo si es necesario)
-                switch(typeObjects){
-
-                    case 'int':
-                        this.printInt(r.T1);
-                        break;
-
-                    case 'string':
-                        this.printString(r.T1);
-                        break;
-
-                    case 'boolean':
-                        this.printInt(r.T1);
-                        break;
-                    
-                    case 'char':
-                        this.printChar(r.T1);
-                        break;
-
-                    case 'null':
-                        this.printNull(r.T1);
-                        break;
-                    
-                    default:
-                        break;
-                }
+                // Imprimir el valor como entero
+                this.printPrimitive({ type: typeObjects, valor: r.T1 });
 
             }
-            
-            // Imprimir coma y espacio si no es el último elemento
-            if (i < elementCount - 1) {
-                this.li(r.A0, 44); // ASCII para ','
+    
+            if(i < length - 1){
+                this.li(r.A0, 44); // ASCII para ',' 
                 this.printChar();
                 this.li(r.A0, 32); // ASCII para ' '
                 this.printChar();
             }
         }
-    
-        // Imprimir cierre del arreglo: "]"
+
         this.li(r.A0, 93); // ASCII para ']'
         this.printChar();
     }
 
 
-    printArregloJoin(arreglo) {
-        const { length } = arreglo;
-        const {typeObjects} = arreglo;
-        const elementCount = length / 4; // Asumiendo 4 bytes por elemento
+    printPrimitive(object) {
+        const tipoPrint = {
+            'int': () => this.printInt(object.valor),
+            'string': () => this.printString(object.valor),
+            'boolean': () => this.callBuiltin('printBool'),
+            'char': () => this.printChar(object.valor),
+            'null': () => this.printNull(object.valor),
+        };
     
-        this.comment(`Print JOIN`);
-    
-        // Recuperar la dirección del arreglo desde el stack
-        this.pop(r.T1); // T1, tiene la dirección del arreglo, por lo de referencia de variable
-    
-        for (let i = 0; i < elementCount; i++) {
-            const offset = i * 4;
+        // Llamamos a la función de impresión según el tipo del objeto
+        if (tipoPrint[object.type]) {
+            tipoPrint[object.type]();
+        } else {
+            throw new Error(`Tipo de dato no soportado para imprimir: ${object.type}`);
+        }
+    }
 
+
+
+    printArregloJoin(arreglo) {
+        
+        const length = arreglo.length / 4; // Número de elementos
+        const {typeObjects} = arreglo;
+
+        this.comment(`Imprimiendo join ${length}`);
+
+        // T0 ya tiene la dirección base del arreglo; no hace falta hacer pop.
+    
+        for (let i = 0; i < length; i++) {
+            const offset = i * 4; // Offset del elemento en bytes
+    
             if(typeObjects === 'float'){
-                // Cargar el elemento desde la memoria relativa a T1
+
+                // Cargar el elemento desde la memoria relativa a T0
                 this.flw(f.FT1, r.T0, offset);
                 this.printFloat(f.FT1);
 
             }else{
-                // Cargar el elemento desde la memoria relativa a T1
+
+                // Acceder al valor del elemento usando la dirección base en T0
                 this.lw(r.T1, r.T0, offset);
 
-    
-                // Imprimir el valor como entero (ajustar según el tipo si es necesario)
-                switch(typeObjects){
-
-                    case 'int':
-                        this.printInt(r.T1);
-                        break;
-
-                    case 'string':
-                        this.printString(r.T1);
-                        break;
-
-                    case 'boolean':
-                        this.printInt(r.T1);
-                        break;
-                    
-                    case 'char':
-                        this.printChar(r.T1);
-                        break;
-
-                    case 'null':
-                        this.printNull(r.T1);
-                        break;
-                    
-                    default:
-                        break;
-                }
+                // Imprimir el valor como entero
+                this.printPrimitive({ type: typeObjects, valor: r.T1 });
 
             }
-            
-            // Imprimir coma y espacio si no es el último elemento
-            if (i < elementCount - 1) {
-                this.li(r.A0, 44); // ASCII para ','
+    
+            if(i < length - 1){
+                this.li(r.A0, 44); // ASCII para ',' 
                 this.printChar();
                 this.li(r.A0, 32); // ASCII para ' '
                 this.printChar();
             }
         }
-
     }
+
 
     callBuiltin(builtinName) {
         if (!builtins[builtinName]) {

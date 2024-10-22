@@ -338,13 +338,13 @@ StructInstancia = primero:(id:Identificador _ ":" _ exp:(exp:Expresion{return ex
 
 ArrayFunc = id1:Identificador _ "." _ method:("indexOf"/"join"/"length") _ exp:("(" _  exp:Expresion? _ ")" {return exp})? {return crearNodo('arrayFunc', { id: crearNodo('referenciaVariable', { id:id1 }), method, exp })} 
     
-    / id:Identificador _ "[" _ index:Expresion _ "]" _ "=" _ value:Expresion      {return crearNodo('arrayFunc', { id, method:'setElement', exp:[index, value]});} 
+    / id1:Identificador _ "[" _ index:Expresion _ "]" _ "=" _ value:Expresion      {return crearNodo('arrayFunc', { id:crearNodo('referenciaVariable', { id:id1 }), method:'setElement', exp:[index, value]});} 
     
     / id:Identificador _ "[" _ index: Expresion "]" _  indices:("[" _ index1: Expresion _ "]"{return index1})+ _ "=" _ value:Expresion {return crearNodo('matrizFunc', { id, method:'setElement', indexs:[index, ...indices], value});} 
     
     / id:Identificador _ "[" _ index: Expresion "]" _  indices:("[" _ index1: Expresion _ "]"{return index1})+ {const value = null; return crearNodo('matrizFunc', { id, method:'getElement', indexs:[index, ...indices], value});}
 
-    / id:Identificador _ "[" _ index:Expresion _ "]"                          {const value = null; return crearNodo('arrayFunc', { id, method:'getElement', exp:[index,value]});} 
+    / id1:Identificador _ "[" _ index:Expresion _ "]"   {const value = null; return crearNodo('arrayFunc', { id:crearNodo('referenciaVariable', { id:id1 }), method:'getElement', exp:[index,value]});} 
 
     //ahora asignacion de valores a las matrices
 

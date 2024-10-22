@@ -138,34 +138,46 @@ export class CompilerVisitor extends BaseVisitor{
         if(tipo2 === null && idArreglo2 === null && Array.isArray(exp)){
             //caso 1, arreglos con valores explicitos como int [] a = {1,2,3,4,5};
                                                 //      tipo[]idArreglo={expresion};
-            this.code.comment('Declaracion de areglo con valores explicitos');
 
-            const size = exp.length * 4; // Cada entero ocupa 4 bytes
-            this.code.addi(r.SP, r.SP, -size); // Reservar espacio en la pila
-            this.code.comment(`Reservando ${size} bytes en el stack para ${node.id}`);
+            this.code.comment('Declaración de arreglo con valores explícitos');
 
-            this.code.pushContant({ type: 'arreglo', length: size, typeObjects: tipoArreglo });
+            const size = exp.length * 4;  // Cada entero ocupa 4 bytes
+            const totalSize = size;  // Espacio solo para los elementos, sin compartir memoria
 
-            //guardar cada valor del arreglo en memoria
-            exp.forEach((valor, index) => {
-                valor.accept(this); // Generar el código para la expresión
+            // Reservar espacio en la pila para el arreglo
+            this.code.addi(r.SP, r.SP, -totalSize);
+            this.code.comment(`Reservando ${totalSize} bytes en el stack para ${idArreglo}`);
 
-                const isValueFloat = this.code.getTopObject().type === 'float';
-                this.code.popObject(isValueFloat ? f.FT0 : r.T0); // Obtener el valor de la expresión
-                const offset = index * 4; // Desplazamiento en memoria
+            // Guardar la dirección base del arreglo en T1
+            this.code.add(r.T1, r.SP, r.ZERO);
 
-                if (isValueFloat) {
-                    this.code.fsw(f.FT0, r.SP, offset);
-                } else {
-                    this.code.sw(r.T0, r.SP, offset);
-                }
-            
+            // Empujar la dirección base del arreglo al stack lógico
+            this.code.pushObject({
+                type: 'arreglo',
+                length: size,
+                typeObjects: tipoArreglo,
             });
 
-            this.code.tagObject(idArreglo);
-            this.code.comment(`Fin Declaracion de arreglo con valores explicitos`);
+            // Guardar los elementos en orden
+            exp.forEach((valor, index) => {
+                valor.accept(this);  // Generar el código para la expresión
 
-        
+                const isValueFloat = this.code.getTopObject().type === 'float';
+                this.code.popObject(isValueFloat ? f.FT0 : r.T0);  // Obtener el valor
+
+                const offset = index * 4;  // Offset para cada elemento
+                if (isValueFloat) {
+                    this.code.fsw(f.FT0, r.T1, offset);  // Guardar flotante
+                } else {
+                    this.code.sw(r.T0, r.T1, offset);  // Guardar entero
+                }
+            });
+
+            // Etiquetar el objeto con el identificador del arreglo
+            this.code.tagObject(idArreglo);
+
+            this.code.comment(`Fin de la declaración del arreglo ${idArreglo}`);
+
         }else if(idArreglo2 === null && !Array.isArray(exp)){
             //caso 2, arreglos con valores por defecto como int [] a = new int[5];
                                                         // tipo[]idArreglo=new tipo2 [exp] expresion acá no es un arreglo
@@ -259,10 +271,9 @@ export class CompilerVisitor extends BaseVisitor{
                 //mover el valor a buscar a t5
                 this.code.mv(r.T5, r.T0);
                 
-                node.id.accept(this); //el arreglo está en r.T1
+                node.id.accept(this); //la direccion del arreglo está en r.T0
                 const arregloInfo = this.code.getTopObject();
                 const size = arregloInfo.length / 4;
-                this.code.pop(r.T1) //queda libre el registro t1
 
                 // Crear etiquetas
                 const labelStart = this.code.newEtiquetaUnica('indexOf_start');
@@ -277,21 +288,18 @@ export class CompilerVisitor extends BaseVisitor{
                 
                 this.code.label(labelStart);
                 this.code.li(r.T4, size); //tamaño del arreglo en t4
-                this.code.bge(r.T2, r.T4, labelEnd); //si t2 >= t4, salta al final
+                this.code.bgt(r.T2, r.T4, labelEnd); //si t2 > t4, salta al final
 
                 //calcular el offset y sumar al puntero base del arreglo
                 this.code.li(r.T4, 4);
                 this.code.mul(r.T4, r.T4, r.T2);
-                this.code.add(r.T0, r.T0, r.T4);
+                this.code.add(r.T1, r.T0, r.T4);
 
                 //cargar el valor del arreglo en t1, los valores vienen en bloques de 4 bytes desde r.t0
-                this.code.lw(r.T1, r.T0, 0); 
-
-                this.code.sub(r.T0, r.T0, r.T4); //regresar a la posición original
+                this.code.lw(r.T1, r.T1, 0); 
 
                 //comparar el valor del arreglo con el valor a buscar
                 this.code.beq(r.T1, r.T5, labelFound); //si son iguales, salta a la etiqueta de encontrado
-
 
                 this.code.addi(r.T2, r.T2, 1); //incrementar el contador
                 this.code.j(labelStart); //saltar al inicio
@@ -326,6 +334,64 @@ export class CompilerVisitor extends BaseVisitor{
                 const arreglo = this.code.getTopObject()
                 this.code.pushContant({ type: 'int', valor: arreglo.length/4 });       
                 this.code.comment(`Fin Metodo length`);
+
+                break;
+
+            case 'setElement': //algo como a[0] = 5, se asigna el valor 5 al arreglo en la posición 0;
+
+                this.code.comment('Metodo setElement');
+
+                // Obtener el índice y guardarlo en T5
+                node.exp[0].accept(this);  // Índice a modificar
+                this.code.mv(r.T5, r.T0);  // Guardamos el índice en T5
+            
+                // Obtener el valor a asignar y guardarlo en A2
+                node.exp[1].accept(this);  // Valor a asignar
+                this.code.mv(r.A2, r.T0);  // Guardamos el valor en A2
+
+                // obtener la dirección base del arreglo 
+                node.id.accept(this);  // dirección base del arreglo queda en r.T0
+            
+                // Calcular el offset: offset = indice * 4
+                this.code.li(r.T4, 4);          // Cada entero ocupa 4 bytes
+                this.code.mul(r.T4, r.T5, r.T4);  // T4 = T5 * 4 (offset)
+            
+                // Sumar el offset a la dirección base del arreglo en A1
+                this.code.add(r.A1, r.T0, r.T4);  // A1 = A1 + offset
+            
+                // Guardar el valor en la posición calculada
+                this.code.sw(r.A2, r.A1, 0);  // Guardamos A2 en la dirección A1
+            
+                this.code.comment('Fin Metodo setElement');
+                break;
+
+            case 'getElement': //algo como a[0], se obtiene el valor del arreglo en la posición 0;
+
+                this.code.comment('Metodo getElement');
+
+                // Obtener el índice y guardarlo en T5
+                node.exp[0].accept(this);  // Índice a modificar
+                this.code.mv(r.T5, r.T0);  // Guardamos el índice en T5
+
+                // obtener la dirección base del arreglo
+                node.id.accept(this);  // dirección base del arreglo queda en r.T0
+                const obj = this.code.getTopObject();
+
+                // Calcular el offset: offset = indice * 4
+                this.code.li(r.T4, 4);          // Cada entero ocupa 4 bytes
+                this.code.mul(r.T4, r.T5, r.T4);  // T4 = T5 * 4 (offset)
+
+                // Sumar el offset a la dirección base del arreglo en A1
+                this.code.add(r.A1, r.T0, r.T4);  // A1 = A1 + offset
+
+                // Cargar el valor en la posición calculada
+                this.code.lw(r.T0, r.A1, 0);  // Cargar el valor en T0
+
+                this.code.push(r.T0);  // Empujar el valor al stack
+
+                this.code.pushObject({ type: obj.typeObjects, length: 4});  // Empujar el tipo del valor
+
+                this.code.comment('Fin Metodo getElement');
 
                 break;
 
@@ -563,7 +629,8 @@ export class CompilerVisitor extends BaseVisitor{
             resultado += valor;
             
             // Pop object y luego decidir el tipo
-            const isFloat = this.code.getTopObject().type === 'float'; 
+            const info = this.code.getTopObject()
+            const isFloat = info.type === 'float'; 
             const object = this.code.popObject(isFloat ? f.FA0 : r.A0);
             
             const tipoPrint = {
@@ -573,7 +640,7 @@ export class CompilerVisitor extends BaseVisitor{
                 'boolean': () => this.code.callBuiltin('printBool'),
                 'char' : () => this.code.printChar(),
                 'null' : () => this.code.printNull(),
-                'arreglo' : () => this.code.printArreglo(object),
+                'arreglo' : () => this.code.printArray(object),
                 'printArregloJoin' : () => this.code.printArregloJoin(object),
             };
             
@@ -590,7 +657,6 @@ export class CompilerVisitor extends BaseVisitor{
             }
 
         });
-
     }
 
 
@@ -635,16 +701,19 @@ export class CompilerVisitor extends BaseVisitor{
     visitReferenciaVariable(node){
         this.code.comment(`Referencia a variable ${node.id}: ${JSON.stringify(this.code.objectStack)}`);
 
-
         const [offset, variableObject] = this.code.getObject(node.id);
         this.code.addi(r.T0, r.SP, offset);
-        this.code.lw(r.T1, r.T0);
-        this.code.push(r.T1);
-        this.code.pushObject({ ...variableObject, id: undefined });
 
-        // this.code.comment(`Fin Referencia Variable: ${node.id}`);
+        // Verificar si es un arreglo y empujar la dirección base
+        if (variableObject.type === 'arreglo') {
+            this.code.push(r.T0); // Empujar la dirección base
+        } else {
+            this.code.lw(r.T1, r.T0, 0); // Cargar el valor en T1
+            this.code.push(r.T1); // Empujar el valor al stack
+        }
+
+        this.code.pushObject({ ...variableObject, id: undefined });
         this.code.comment(`Fin referencia de variable ${node.id}: ${JSON.stringify(this.code.objectStack)}`);
-    
     }
 
 
