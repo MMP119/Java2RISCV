@@ -99,14 +99,23 @@ document.getElementById('runButton').addEventListener('click', () => {
         //let output = interpretacion.salida;
         let output = "";
         const erroes = obtenerErrores();
-        //if(erroes.length > 0){
+        let parseo = false;
+        if(erroes.length > 0){
+            erroes.forEach(error => {
+                if(error.mensaje === 'No se puede dividir entre 0'){
+                    console.log(error)
+                    parseo = true; //si hay un error de division entre 0 se puede parsear, otro error no
+                }
+            });
+        }
+        if(erroes.length > 0 && !parseo){
             output += '-------------->    ERROR FATAL, NO SE PUEDE COMPILAR   <--------------\n\n';
             output += '\n\n============================== ERRORES ==============================\n';
             erroes.forEach(error => {
                 output += `Error: ${error.mensaje}\nLínea: ${error.linea}, Columna: ${error.columna}\n`;
             });
             consoleEditor.setValue(output);
-        //}else{
+        }else{
 
                 const astCompiler = parseCompiler(code); // analizar el código
 
@@ -118,7 +127,7 @@ document.getElementById('runButton').addEventListener('click', () => {
 
                 consoleEditor.setValue(output);
     
-            //}     
+            }     
 
     } catch (e) {
         if (e.name === 'SyntaxError') {
