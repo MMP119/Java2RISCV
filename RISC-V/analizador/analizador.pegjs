@@ -322,6 +322,18 @@ Datos =  "(" _ exp:Expresion _ ")" { return crearNodo('agrupacion', { exp }) }
     / Booleano
 
     / ArrayFunc
+
+    //para funciones embebidas
+    / "parseInt" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'parseInt' }), args: [exp] }) }
+
+    / "parseFloat" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'parseFloat' }), args: [exp] }) }
+
+    / "toString" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'toString' }), args: [exp] }) }
+
+    / "toLowerCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'toLowerCase' }), args: [exp] }) }
+
+    / "toUpperCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'toUpperCase' }), args: [exp] }) }
+
                                             //esto es para los structs, las intancias
     / id:Identificador _ "{" _ args:StructInstancia? _ "}" {return crearNodo('instancia', {id, args: args || []})} 
 

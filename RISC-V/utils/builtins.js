@@ -492,6 +492,30 @@ const pushString = (code, string) => {
 };
 
 
+/*export const parseInt = (code) => {
+    code.comment('Parsear entero');
+    code.li(r.T0, 0); // Inicializar el resultado en 0
+    code.li(r.T1, 10); // Base 10
+    code.li(r.T2, 0); // Inicializar el índice en 0
+
+    const loopLabel = code.newEtiquetaUnica('parse_int_loop');
+    const endLabel = code.newEtiquetaUnica('parse_int_end');
+
+    code.label(loopLabel);
+    code.lb(r.T3, r.A0, r.T2); // Cargar el byte en la posición actual
+    code.beq(r.T3, r.ZERO, endLabel); // Si es el terminador nulo, terminar
+
+    code.subi(r.T3, r.T3, 48); // Convertir de ASCII a entero
+    code.mul(r.T0, r.T0, r.T1); // Multiplicar el resultado por la base
+    code.add(r.T0, r.T0, r.T3); // Sumar el dígito actual
+    code.addi(r.T2, r.T2, 1); // Avanzar al siguiente carácter
+    code.j(loopLabel);
+
+    code.label(endLabel);
+    code.push(r.T0); // Guardar el resultado en la pila
+    code.comment('Fin parsear entero');
+};*/
+
 
 export const builtins = {
     concatString: concatString,
@@ -511,5 +535,7 @@ export const builtins = {
     mayorIgualFloat: mayorIgualFloat,
     printNewLine: printNewLine,
     printBool: printBool,
+    parseInt: parseInt,
+
 
 }
