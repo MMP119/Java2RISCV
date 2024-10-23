@@ -26,6 +26,7 @@ export class Generador {
     constructor() {
         this.instrucciones = []
         this.objectStack = []
+        this.instruccionesDeFunciones = [];
         this.depth = 0
         this.etiquetaUnica = 0
         this._usedBuiltins = new Set()
@@ -877,6 +878,9 @@ export class Generador {
     toString() {
         this.endProgram()
         this.comment('Builtins')
+
+        this.comment('funciones foraneas')
+        this.instruccionesDeFunciones.forEach(instruccion => this.instrucciones.push(instruccion))
 
         Array.from(this._usedBuiltins).forEach(builtinName => {
             this.label(builtinName)

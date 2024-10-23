@@ -8,7 +8,7 @@ export const registers = {
     T0: 't0',       // registro temporal (no preservado entre llamadas)
     T1: 't1',       // registro temporal (no preservado entre llamadas)
     T2: 't2',       // registro temporal (no preservado entre llamadas)
-    S0_FP: 's0/fp', // s0: registro guardado (a veces usado como frame pointer)
+    FP: 's0', // s0: registro guardado (a veces usado como frame pointer)
     S1: 's1',       // registro guardado (preservado entre llamadas)
     A0: 'a0',       // argumento (primer parámetro y valor de retorno)
     A1: 'a1',       // argumento (segundo parámetro)

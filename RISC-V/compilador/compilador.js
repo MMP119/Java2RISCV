@@ -3,6 +3,8 @@ import { Generador } from "../generador/generador.js";
 import { BaseVisitor} from "../compilador/visitor.js"
 import { registrarError } from "../../interprete/global/errores.js";
 import { stringTo1ByteArray } from "../utils/utils.js";
+import { FrameVisitor } from "./frame.js";
+import { ReferenciaVariable } from "./nodos.js";
 
 export class CompilerVisitor extends BaseVisitor{
 
@@ -12,6 +14,10 @@ export class CompilerVisitor extends BaseVisitor{
         this.labelBreak = null;
         this.labelContinue = null;
 
+        this.functionMetadata = {};
+        this.insideFunction = false;
+        this.frameDclIndex = 0;
+        this.returnLabel = null;
 
 
         /**
@@ -711,6 +717,12 @@ export class CompilerVisitor extends BaseVisitor{
         const valueObject = this.code.popObject(isValueFloat ? f.FT0 : r.T0);
         const [offset, variableObject] = this.code.getObject(node.id);
 
+        if (this.insideFunction) {
+            this.code.addi(r.T1, r.FP, -variableObject.offset * 4); 
+            this.code.sw(r.T0, r.T1);
+            return
+        }
+
         if (isValueFloat) {
 
             this.code.addi(r.T1, r.SP, offset);
@@ -741,7 +753,15 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.comment(`Referencia a variable ${node.id}: ${JSON.stringify(this.code.objectStack)}`);
 
         const [offset, variableObject] = this.code.getObject(node.id);
-        //console.log(variableObject, offset);
+        
+        if (this.insideFunction) {
+            this.code.addi(r.T1, r.FP, -variableObject.offset * 4);
+            this.code.lw(r.T0, r.T1);
+            this.code.push(r.T0);
+            this.code.pushObject({ ...variableObject, id: undefined });
+            return
+        }
+
         this.code.addi(r.T0, r.SP, offset);
 
         // Verificar si es un arreglo y empujar la dirección base
@@ -1066,6 +1086,185 @@ export class CompilerVisitor extends BaseVisitor{
         }
     }
 
+
+
+    /**
+     * @type {BaseVisitor['visitReturn']}
+     */
+    visitReturn(node) {
+        this.code.comment('Inicio de Return');
+
+        if(node.exp){
+            node.exp.accept(this);
+            this.code.popObject(r.A0);
+
+            const frameSize = this.functionMetadata[this.insideFunction].frameSize;
+            const returnOffset = frameSize - 1;
+            this.code.addi(r.T0, r.FP, -returnOffset*4);
+            this.code.sw(r.A0, r.T0);
+        }
+
+        this.code.j(this.returnLabel);
+        this.code.comment('Fin de Return');
+    }
+
+
+
+    /**
+     * @type {BaseVisitor['visitFuncDcl']}
+     */
+    visitFuncDcl(node){
+        const baseSize = 2; // Tamaño base de la pila (ra, fp)
+
+        const paramsSize = node.params.length; // Tamaño de los parámetros
+
+        //console.log(node.params, paramsSize);
+
+        const frameVisitor = new FrameVisitor(baseSize + paramsSize);
+
+        node.bloque.accept(frameVisitor);
+        const localFrame = frameVisitor.frame;
+        const localSize = localFrame.length;
+
+        const returnSize = 1;
+
+        const totalSize = baseSize + paramsSize + localSize + returnSize;
+        this.functionMetadata[node.id] = {
+            frameSize: totalSize,
+            returnType: node.tipo,
+        }
+
+        const instruccionesDeMain = this.code.instrucciones;
+        const instruccionesDeDeclaracionDeFuncion = [];
+        this.code.instrucciones = instruccionesDeDeclaracionDeFuncion;
+
+
+        node.params.forEach((param, index) => {
+            this.code.pushObject({
+                id: param.id,
+                type: param.tipo,
+                length: 4,
+                offset: baseSize + index,
+            })
+        });
+
+        localFrame.forEach(variableLocal =>{
+            this.code.pushObject({
+                ...variableLocal,
+                length: 4,
+                type: 'local',
+            })
+        });
+
+        this.insideFunction = node.id;
+        this.frameDclIndex = 0;
+        this.returnLabel = this.code.newEtiquetaUnica('return');
+
+        this.code.comment(`Declaración de función: ${node.id}`);
+        this.code.label(node.id);
+
+        node.bloque.accept(this);
+
+        this.code.label(this.returnLabel);
+
+        this.code.add(r.T0, r.ZERO, r.FP);
+        this.code.lw(r.RA, r.T0);
+        this.code.jalr(r.ZERO, r.RA, 0);
+        this.code.comment(`Fin de la función: ${node.id}`);
+
+        //clear los metadatos
+        for(let i = 0; i<paramsSize+localSize; i++){
+            this.code.objectStack.pop(); // no se retrodece el sp, hasta más adelante
+        }
+
+        this.code.instrucciones = instruccionesDeMain
+
+        instruccionesDeDeclaracionDeFuncion.forEach(instruccion => {
+            this.code.instruccionesDeFunciones.push(instruccion);
+        });
+
+    }
+
+
+
+    /**
+     * @type {BaseVisitor['visitLlamada']}
+     */
+    visitLlamada(node){
+        console.log(node);
+        if(!(node.callee instanceof ReferenciaVariable)) return;
+
+        const nombreFuncion = node.callee.id;
+
+        /*switch (nombreFuncion) {
+            
+            case "parseInt":
+                this.code.callBuiltin('parseInt');
+                this.code.pushObject({ type: 'int', length: 4 });
+                return;
+            case "parseFloat":
+                break;
+            case "toString":
+                break;
+            case "toLowerCase":
+                break;
+            case "toUpperCase":
+                break;
+            
+            default:
+                break;
+        
+        }*/
+
+        this.code.comment(`Llamada a función: ${nombreFuncion}`);
+
+        const etiquetaRetornoLlamada = this.code.newEtiquetaUnica('returnLlamada');
+
+        //guardar los argumentos
+        node.args.forEach((arg, index)=>{
+            arg.accept(this);
+            this.code.popObject(r.T0);
+            this.code.addi(r.T1, r.SP, -4*(3+index));
+            this.code.sw(r.T0, r.T1);
+        });
+
+        //calcular direccion del nuevo fp en tq
+        this.code.addi(r.T1, r.SP, -4);
+
+        //guardar direccion del retorno
+        this.code.la(r.T0, etiquetaRetornoLlamada);
+        this.code.push(r.T0);
+
+        //guardar el fp
+        this.code.push(r.FP);
+        this.code.addi(r.FP, r.T1, 0);
+
+        //coloca el sp al final del frame
+        this.code.addi(r.SP, r.SP, -(node.args.length*4));
+
+        //saltar a la funcion
+        this.code.j(nombreFuncion);
+        this.code.label(etiquetaRetornoLlamada);
+
+        //recuperar el valor del retorno
+        const frameSize = this.functionMetadata[nombreFuncion].frameSize;
+        const returnSize =frameSize - 1;
+        this.code.addi(r.T0, r.FP, -returnSize*4);
+        this.code.lw(r.A0, r.T0);
+
+        //regresar el fp al contexto de ejecucion anterior
+        this.code.addi(r.T0, r.FP, -4);
+        this.code.lw(r.FP, r.T0);
+
+        //regresar el sp al contexto de ejecucion 
+        this.code.addi(r.SP, r.SP, (frameSize-1)*4);
+
+        this.code.push(r.A0);
+        this.code.pushObject({ type: this.functionMetadata[nombreFuncion].returnType, length: 4 });
+
+        this.code.comment(`Fin de llamada a función: ${nombreFuncion}`);
+
+    }
 
 
 }
