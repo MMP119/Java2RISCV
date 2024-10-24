@@ -1312,10 +1312,19 @@ export class CompilerVisitor extends BaseVisitor{
     visittoString(node) {
         this.code.comment('Inicio toString');
 
-        node.exp.accept(this);  // Cargar el valor en el stack físico
-
-        
-        
+        if(node.exp instanceof ReferenciaVariable){
+            node.exp.accept(this);
+            const object  = this.code.getTopObject();
+            this.code.mv(r.T0, r.T1);  // Copiar la referencia a T0 para procesarla
+            if(object.type === 'int'){
+                this.code.callBuiltin('intToString');
+            }else if(object.type === 'float'){
+                this.code.callBuiltin('floatToString');
+            }
+        }else{
+            const string = node.exp.valor.toString();
+            this.code.pushContant({ type: 'string', valor: string });
+        }        
         
         this.code.pushObject({ type: 'string', length: 4 });
 

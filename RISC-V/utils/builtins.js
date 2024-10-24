@@ -629,29 +629,92 @@ export const parseFloatReferencia = (code) => {
 
 
 export const intToString = (code) => {
-    code.comment('Convirtiendo int a string');
-    code.pop(r.T0);  // Obtener el entero del stack
+    
+    const inicioBucle = code.newEtiquetaUnica('intToString_inicio');
+    const finBucle = code.newEtiquetaUnica('intToString_fin');
+    const esNegativo = code.newEtiquetaUnica('intToString_esNegativo');
+    const noEsNegativo = code.newEtiquetaUnica('intToString_noEsNegativo');
 
-    // Usar syscall para imprimir el número como string
-    code.li(r.A7, 34);  // Syscall para convertir entero a string
-    code.ecall();
+    // Crear un registro temporal para el número (por si es negativo)
+    code.mv(r.T1, r.T0);  // T1 = T0 (el valor original)
 
-    // Guardar la referencia al string en HP (heap pointer)
-    code.push(r.A0);  // Empujar la referencia al string generado
+    // Verificar si el número es negativo
+    code.bgez(r.T0, noEsNegativo);  // Si T0 >= 0, no es negativo
+
+    // Si es negativo, cambiar el signo
+    code.label(esNegativo);
+    code.neg(r.T1, r.T0);  // T1 = -T0 (valor positivo)
+    code.sb(r.T3, r.HP, 0);  // Guardar '-' en el heap
+    code.addi(r.HP, r.HP, 1);  // Avanzar el heap pointer
+
+    code.label(noEsNegativo);
+
+    // Inicializar puntero de escritura (en el heap)
+    code.add(r.T2, r.HP, r.ZERO);  // T2 apunta al inicio del string
+
+    // Bucle para convertir int a string (carácter por carácter)
+    code.label(inicioBucle);
+
+    // Calcular dígito (T3 = T1 % 10)
+    code.li(r.T4, 10);
+    code.rem(r.T3, r.T1, r.T4);  // Resto en T3
+
+    // Convertir el dígito a su ASCII ('0' = 48)
+    code.addi(r.T3, r.T3, 48);  // T3 = T3 + '0'
+
+    // Guardar el dígito en el heap
+    code.sb(r.T3, r.T2, 0);  // Mem[T2] = T3
+
+    // Avanzar el puntero del heap
+    code.addi(r.T2, r.T2, 1);  // T2++
+
+    // Dividir el número por 10
+    code.div(r.T1, r.T1, r.T4);  // T1 = T1 / 10
+
+    // Si el número no es 0, continuar
+    code.bnez(r.T1, inicioBucle);  // Si T1 != 0, seguir
+
+    // Agregar carácter nulo al final del string
+    code.li(r.T3, 0);  
+    code.sb(r.T3, r.T2, 0);  // Mem[T2] = '\0'
+
+    // Mover el heap pointer después del string
+    code.addi(r.HP, r.T2, 1);
+
+    // Empujar la referencia del string al stack
+    code.push(r.HP);  
+
+    code.label(finBucle);
+    
 };
-
 
 export const floatToString = (code) => {
     code.comment('Convirtiendo float a string');
-    code.popFloat(f.FT0);  // Obtener el float del stack
 
-    // Usar syscall para convertir float a string con 2 decimales
+    // Obtener el float del stack
+    code.popFloat(f.FT0);  // Recuperar float en FT0
+
+    // Llamar al syscall para convertir float a string
     code.li(r.A7, 35);  // Syscall para float to string
-    code.li(r.A1, 2);   // Especificar 2 decimales
+    code.li(r.A1, 2);   // 2 decimales (especificar precisión)
+    code.ecall();        // Llamar al syscall
+
+    // Comprobar si la dirección en A0 es válida
+    code.beqz(r.A0, 'error_floatToString');  // Si A0 es 0, lanzar error
+
+    // Guardar la referencia del string en el heap (HP)
+    code.push(r.A0);  // Empujar la referencia del string al stack
+    code.comment('Fin floatToString');
+    code.j('retorno_floatToString');  // Saltar al final
+
+    // Manejar error de dirección nula
+    code.label('error_floatToString');
+    code.comment('Error: Dirección nula al convertir float a string');
+    code.li(r.A7, 10);  // Finalizar ejecución
     code.ecall();
 
-    // Guardar la referencia al string en HP (heap pointer)
-    code.push(r.A0);  // Empujar la referencia al string generado
+    code.label('retorno_floatToString');
+    code.ret();
 };
 
 

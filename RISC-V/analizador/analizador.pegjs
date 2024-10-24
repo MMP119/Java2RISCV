@@ -190,21 +190,6 @@ Asignacion = asignado:LlamadaFuncion _ "=" _ asgn:Asignacion
     / OperadorAsignacion
 
     / Ternario
-
-        //para funciones embebidas
-    / "parseInt" _ "(" _ exp:Expresion _ ")" { return crearNodo('parseInt', {exp})}
-
-    / "parsefloat" _ "(" _ exp:Expresion _ ")" { return crearNodo('parseFloat', { exp })}
-
-    / "toString" _ "(" _ exp:Expresion _ ")" { return crearNodo('toString', { exp })}
-
-    / "toLowerCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('toLowerCase', { exp})}
-
-    / "toUpperCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('toUpperCase', { exp })}
-
-    / "typeof" _  exp:Expresion _ { return crearNodo('typeof', { exp }) }
-
-    / "Object.keys" _ "(" _ exp:Datos _ ")" { return crearNodo('ObjKey', { exp }) }
     
     / Or
 
@@ -338,6 +323,20 @@ Datos =  "(" _ exp:Expresion _ ")" { return crearNodo('agrupacion', { exp }) }
     / Booleano
 
     / ArrayFunc
+
+        //para funciones embebidas
+    / "parseInt" _ "(" _ exp:Expresion _ ")" _ { return crearNodo('parseInt', {exp})}
+
+    / "parsefloat" _ "(" _ exp:Expresion _ ")" _{ return crearNodo('parseFloat', { exp })}
+
+    / "toString" _ "(" _ exp:Expresion _ ")" _ { return crearNodo('toString', { exp })}
+
+    / "toLowerCase" _ "(" _ exp:Expresion _ ")" _ { return crearNodo('toLowerCase', { exp})}
+
+    / "toUpperCase" _ "(" _ exp:Expresion _ ")" _ { return crearNodo('toUpperCase', { exp })}
+
+    / "typeof" _  exp:Expresion _ { return crearNodo('typeof', { exp }) }
+
                                             //esto es para los structs, las intancias
     / id:Identificador _ "{" _ args:StructInstancia? _ "}" {return crearNodo('instancia', {id, args: args || []})} 
 
