@@ -492,30 +492,140 @@ const pushString = (code, string) => {
 };
 
 
-/*export const parseInt = (code) => {
-    code.comment('Parsear entero');
-    code.li(r.T0, 0); // Inicializar el resultado en 0
-    code.li(r.T1, 10); // Base 10
-    code.li(r.T2, 0); // Inicializar el índice en 0
+export const parseIntReferencia = (code) => {
+    // Inicializar el acumulador
+    code.li(r.T1, 0);  // T1 = 0 (acumulador del entero)
 
-    const loopLabel = code.newEtiquetaUnica('parse_int_loop');
-    const endLabel = code.newEtiquetaUnica('parse_int_end');
+    // Crear etiquetas para el bucle
+    const inicioBucle = code.newEtiquetaUnica('parseInt_inicio');
+    const finBucle = code.newEtiquetaUnica('parseInt_fin');
+    const puntoDecimal = code.newEtiquetaUnica('punto_decimal');
 
-    code.label(loopLabel);
-    code.lb(r.T3, r.A0, r.T2); // Cargar el byte en la posición actual
-    code.beq(r.T3, r.ZERO, endLabel); // Si es el terminador nulo, terminar
+    // Etiqueta de inicio del bucle
+    code.label(inicioBucle);
 
-    code.subi(r.T3, r.T3, 48); // Convertir de ASCII a entero
-    code.mul(r.T0, r.T0, r.T1); // Multiplicar el resultado por la base
-    code.add(r.T0, r.T0, r.T3); // Sumar el dígito actual
-    code.addi(r.T2, r.T2, 1); // Avanzar al siguiente carácter
-    code.j(loopLabel);
+    // Cargar el carácter actual en T2
+    code.lb(r.T2, r.T0, 0);  // T2 = Mem[T0] (carácter actual)
 
-    code.label(endLabel);
-    code.push(r.T0); // Guardar el resultado en la pila
-    code.comment('Fin parsear entero');
-};*/
+    // Verificar si es el carácter nulo (fin del string)
+    code.beqz(r.T2, finBucle);  // Si T2 == 0 (fin del string), salir del bucle
 
+    // Verificar si es un punto decimal ('.')
+    code.li(r.T3, 46);  // ASCII de '.'
+    code.beq(r.T2, r.T3, puntoDecimal);  // Si T2 == '.', saltar a punto_decimal
+
+    // Restar '0' para obtener el valor numérico del dígito
+    code.li(r.T3, 48);  // ASCII de '0'
+    code.sub(r.T2, r.T2, r.T3);  // T2 = T2 - '0'
+
+    // Multiplicar el acumulador por 10 y sumar el dígito actual
+    code.li(r.T4, 10);
+    code.mul(r.T1, r.T1, r.T4);  // T1 = T1 * 10
+    code.add(r.T1, r.T1, r.T2);  // T1 = T1 + T2
+
+    // Avanzar al siguiente carácter del string
+    code.addi(r.T0, r.T0, 1);  // T0++
+
+    // Volver al inicio del bucle
+    code.j(inicioBucle);
+
+    // Etiqueta para el punto decimal (truncamiento)
+    code.label(puntoDecimal);
+    code.comment('Truncando en el punto decimal');
+    code.j(finBucle);  // Saltar al fin del bucle
+
+    // Etiqueta de fin del bucle
+    code.label(finBucle);
+
+    // Empujar el resultado al stack físico
+    code.push(r.T1);  // Empujar el valor final al stack
+};
+
+
+export const parseFloatReferencia = (code) => {
+    // Inicializar acumuladores
+    code.li(r.T1, 0);  // T1 = parte entera
+    code.fcvtsw(f.FT0, r.T1);  // FT0 = parte decimal
+    code.li(r.T2, 1);  // T2 = divisor decimal
+
+    // Crear etiquetas para el bucle
+    const inicioBucle = code.newEtiquetaUnica('parseFloat_inicio');
+    const finBucle = code.newEtiquetaUnica('parseFloat_fin');
+    const procesarDecimal = code.newEtiquetaUnica('parseFloat_decimal');
+    const procesandoParteDecimal = code.newEtiquetaUnica('procesando_decimal');
+
+    // Etiqueta de inicio del bucle
+    code.label(inicioBucle);
+
+    // Cargar el carácter actual en T3
+    code.lb(r.T3, r.T0, 0);  // T3 = Mem[T0] (carácter actual)
+
+    // Verificar si es el carácter nulo
+    code.beqz(r.T3, finBucle);  // Si es 0, salir del bucle
+
+    // Verificar si es un punto decimal
+    code.li(r.T4, 46);  // ASCII de '.'
+    code.beq(r.T3, r.T4, procesarDecimal);  // Si es '.', ir a procesar decimales
+
+    // Restar 0 para obtener el valor numérico
+    code.li(r.T4, 48);  // ASCII de '0'
+    code.sub(r.T3, r.T3, r.T4);  // T3 = T3 - '0'
+
+    // Multiplicar parte entera por 10 y sumar el dígito
+    code.li(r.T4, 10);
+    code.mul(r.T1, r.T1, r.T4);  // T1 = T1 * 10
+    code.add(r.T1, r.T1, r.T3);  // T1 = T1 + T3
+
+    // Avanzar al siguiente carácter
+    code.addi(r.T0, r.T0, 1);  // T0++
+
+    // Volver al inicio del bucle
+    code.j(inicioBucle);
+
+    // Procesar la parte decimal
+    code.label(procesarDecimal);
+    code.addi(r.T0, r.T0, 1);  // Avanzar al siguiente carácter
+
+    // Bucle para procesar decimales
+    code.label(procesandoParteDecimal);
+    code.lb(r.T3, r.T0, 0);  // Cargar carácter actual
+
+    // Verificar si es el carácter nulo
+    code.beqz(r.T3, finBucle);  // Salir si es nulo
+
+    // Restar '0' para obtener valor numérico
+    code.li(r.T4, 48);
+    code.sub(r.T3, r.T3, r.T4);
+
+    // Actualizar divisor decimal
+    code.li(r.T4, 10);
+    code.mul(r.T2, r.T2, r.T4);  // T2 *= 10
+
+    // Calcular valor decimal y agregarlo a FT0
+    code.li(r.T4, 1);  // FT1 = 1.0
+    code.fcvtsw(f.FT1, r.T4);  // FT1 = T3
+    code.fcvtsw(f.FT2, r.T3);  // FT2 = T3
+    code.fcvtsw(f.FT3, r.T2);  // FT3 = divisor
+    code.fmul(f.FT1, f.FT1, f.FT2);  // FT1 *= T3
+    code.fdiv(f.FT1, f.FT1, f.FT3);  // FT1 /= divisor
+    code.fadd(f.FT0, f.FT0, f.FT1);  // FT0 += FT1
+
+    // Avanzar al siguiente carácter
+    code.addi(r.T0, r.T0, 1);  // T0++
+
+    // Volver a procesar más decimales
+    code.j(procesandoParteDecimal);
+
+    // Fin del bucle
+    code.label(finBucle);
+
+    // Combinar parte entera y decimal
+    code.fcvtsw(f.FT4, r.T1);  // FT4 = parte entera
+    code.fadd(f.FT0, f.FT0, f.FT4);  // FT0 = T1 + FT0
+
+    // Empujar resultado al stack
+    code.pushFloat(f.FT0);
+};
 
 export const builtins = {
     concatString: concatString,
@@ -535,7 +645,8 @@ export const builtins = {
     mayorIgualFloat: mayorIgualFloat,
     printNewLine: printNewLine,
     printBool: printBool,
-    parseInt: parseInt,
+    parseIntReferencia: parseIntReferencia,
+    parseFloatReferencia: parseFloatReferencia,
 
 
 }

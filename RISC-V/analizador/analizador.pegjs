@@ -29,6 +29,11 @@
         "declaracionMatriz": nodos.DeclaracionMatriz,
         "matrizFunc": nodos.MatrizFunc,
         'dclFunc': nodos.FuncDcl,
+        'parseInt': nodos.parseInt,
+        'parseFloat': nodos.parseFloat,
+        'toString': nodos.toString,
+        'toLowerCase': nodos.toLowerCase,
+        'toUpperCase': nodos.toUpperCase,
         'typeof': nodos.typEof,
         'dclStruct': nodos.StructDcl,
         'instancia': nodos.Instancia,
@@ -186,6 +191,17 @@ Asignacion = asignado:LlamadaFuncion _ "=" _ asgn:Asignacion
 
     / Ternario
 
+        //para funciones embebidas
+    / "parseInt" _ "(" _ exp:Expresion _ ")" { return crearNodo('parseInt', {exp})}
+
+    / "parsefloat" _ "(" _ exp:Expresion _ ")" { return crearNodo('parseFloat', { exp })}
+
+    / "toString" _ "(" _ exp:Expresion _ ")" { return crearNodo('toString', { exp })}
+
+    / "toLowerCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('toLowerCase', { exp})}
+
+    / "toUpperCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('toUpperCase', { exp })}
+
     / "typeof" _  exp:Expresion _ { return crearNodo('typeof', { exp }) }
 
     / "Object.keys" _ "(" _ exp:Datos _ ")" { return crearNodo('ObjKey', { exp }) }
@@ -322,18 +338,6 @@ Datos =  "(" _ exp:Expresion _ ")" { return crearNodo('agrupacion', { exp }) }
     / Booleano
 
     / ArrayFunc
-
-    //para funciones embebidas
-    / "parseInt" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'parseInt' }), args: [exp] }) }
-
-    / "parseFloat" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'parseFloat' }), args: [exp] }) }
-
-    / "toString" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'toString' }), args: [exp] }) }
-
-    / "toLowerCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'toLowerCase' }), args: [exp] }) }
-
-    / "toUpperCase" _ "(" _ exp:Expresion _ ")" { return crearNodo('llamada', { callee:crearNodo('referenciaVariable', { id:'toUpperCase' }), args: [exp] }) }
-
                                             //esto es para los structs, las intancias
     / id:Identificador _ "{" _ args:StructInstancia? _ "}" {return crearNodo('instancia', {id, args: args || []})} 
 

@@ -1016,6 +1016,131 @@ export class MatrizFunc extends Expresion {
     }
 }
     
+export class parseInt extends Expresion {
+
+    /**
+    * @param {Object} options
+    * @param {Expresion} options.exp Expresion a evaluar
+    */
+    constructor({ exp }) {
+        super();
+        
+        /**
+         * Expresion a evaluar
+         * @type {Expresion}
+        */
+        this.exp = exp;
+
+    }
+
+    /**
+     * @param {BaseVisitor} visitor
+     */
+    accept(visitor) {
+        return visitor.visitparseInt(this);
+    }
+}
+    
+export class parseFloat extends Expresion {
+
+    /**
+    * @param {Object} options
+    * @param {Expresion} options.exp Expresion a evaluar
+    */
+    constructor({ exp }) {
+        super();
+        
+        /**
+         * Expresion a evaluar
+         * @type {Expresion}
+        */
+        this.exp = exp;
+
+    }
+
+    /**
+     * @param {BaseVisitor} visitor
+     */
+    accept(visitor) {
+        return visitor.visitparseFloat(this);
+    }
+}
+    
+export class toString extends Expresion {
+
+    /**
+    * @param {Object} options
+    * @param {Expresion} options.exp Expresion a evaluar
+    */
+    constructor({ exp }) {
+        super();
+        
+        /**
+         * Expresion a evaluar
+         * @type {Expresion}
+        */
+        this.exp = exp;
+
+    }
+
+    /**
+     * @param {BaseVisitor} visitor
+     */
+    accept(visitor) {
+        return visitor.visittoString(this);
+    }
+}
+    
+export class toLowerCase extends Expresion {
+
+    /**
+    * @param {Object} options
+    * @param {Expresion} options.exp Expresion a evaluar
+    */
+    constructor({ exp }) {
+        super();
+        
+        /**
+         * Expresion a evaluar
+         * @type {Expresion}
+        */
+        this.exp = exp;
+
+    }
+
+    /**
+     * @param {BaseVisitor} visitor
+     */
+    accept(visitor) {
+        return visitor.visittoLowerCase(this);
+    }
+}
+    
+export class toUpperCase extends Expresion {
+
+    /**
+    * @param {Object} options
+    * @param {Expresion} options.exp Expresion a evaluar
+    */
+    constructor({ exp }) {
+        super();
+        
+        /**
+         * Expresion a evaluar
+         * @type {Expresion}
+        */
+        this.exp = exp;
+
+    }
+
+    /**
+     * @param {BaseVisitor} visitor
+     */
+    accept(visitor) {
+        return visitor.visittoUpperCase(this);
+    }
+}
+    
 export class typEof extends Expresion {
 
     /**
@@ -1214,4 +1339,4 @@ export class ObjKey extends Expresion {
     }
 }
     
-export default { Expresion, OperacionBinaria, OperacionUnaria, Agrupacion, Numero, Cadena, Booleano, DeclaracionTipoVariable, ReferenciaVariable, Print, ExpresionStmt, Asignacion, Bloque, If, While, For, Foreach, Break, Continue, Return, Llamada, FuncDcl, Ternario, Switch, DeclaracionArreglo, DeclaracionMatriz, ArrayFunc, MatrizFunc, typEof, StructDcl, Instancia, Get, Set, ObjKey }
+export default { Expresion, OperacionBinaria, OperacionUnaria, Agrupacion, Numero, Cadena, Booleano, DeclaracionTipoVariable, ReferenciaVariable, Print, ExpresionStmt, Asignacion, Bloque, If, While, For, Foreach, Break, Continue, Return, Llamada, FuncDcl, Ternario, Switch, DeclaracionArreglo, DeclaracionMatriz, ArrayFunc, MatrizFunc, parseInt, parseFloat, toString, toLowerCase, toUpperCase, typEof, StructDcl, Instancia, Get, Set, ObjKey }

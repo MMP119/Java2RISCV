@@ -85,6 +85,21 @@
  * @typedef {import('./nodos').MatrizFunc} MatrizFunc
 
 
+ * @typedef {import('./nodos').parseInt} parseInt
+
+
+ * @typedef {import('./nodos').parseFloat} parseFloat
+
+
+ * @typedef {import('./nodos').toString} toString
+
+
+ * @typedef {import('./nodos').toLowerCase} toLowerCase
+
+
+ * @typedef {import('./nodos').toUpperCase} toUpperCase
+
+
  * @typedef {import('./nodos').typEof} typEof
 
 
@@ -361,6 +376,51 @@ export class BaseVisitor {
      */
     visitMatrizFunc(node) {
         throw new Error('Metodo visitMatrizFunc no implementado');
+    }
+    
+
+    /**
+     * @param {parseInt} node
+     * @returns {any}
+     */
+    visitparseInt(node) {
+        throw new Error('Metodo visitparseInt no implementado');
+    }
+    
+
+    /**
+     * @param {parseFloat} node
+     * @returns {any}
+     */
+    visitparseFloat(node) {
+        throw new Error('Metodo visitparseFloat no implementado');
+    }
+    
+
+    /**
+     * @param {toString} node
+     * @returns {any}
+     */
+    visittoString(node) {
+        throw new Error('Metodo visittoString no implementado');
+    }
+    
+
+    /**
+     * @param {toLowerCase} node
+     * @returns {any}
+     */
+    visittoLowerCase(node) {
+        throw new Error('Metodo visittoLowerCase no implementado');
+    }
+    
+
+    /**
+     * @param {toUpperCase} node
+     * @returns {any}
+     */
+    visittoUpperCase(node) {
+        throw new Error('Metodo visittoUpperCase no implementado');
     }
     
 

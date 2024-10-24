@@ -2,7 +2,7 @@ import { registers as r, floatRegisters as f } from "../constantes/constantes.js
 import { Generador } from "../generador/generador.js";
 import { BaseVisitor} from "../compilador/visitor.js"
 import { registrarError } from "../../interprete/global/errores.js";
-import { stringTo1ByteArray } from "../utils/utils.js";
+import { numberToF32 } from "../utils/utils.js";
 import { FrameVisitor } from "./frame.js";
 import { ReferenciaVariable } from "./nodos.js";
 
@@ -1196,26 +1196,6 @@ export class CompilerVisitor extends BaseVisitor{
 
         const nombreFuncion = node.callee.id;
 
-        /*switch (nombreFuncion) {
-            
-            case "parseInt":
-                this.code.callBuiltin('parseInt');
-                this.code.pushObject({ type: 'int', length: 4 });
-                return;
-            case "parseFloat":
-                break;
-            case "toString":
-                break;
-            case "toLowerCase":
-                break;
-            case "toUpperCase":
-                break;
-            
-            default:
-                break;
-        
-        }*/
-
         this.code.comment(`Llamada a función: ${nombreFuncion}`);
 
         const etiquetaRetornoLlamada = this.code.newEtiquetaUnica('returnLlamada');
@@ -1266,5 +1246,93 @@ export class CompilerVisitor extends BaseVisitor{
 
     }
 
+
+
+    /**
+     * @type {BaseVisitor['visitparseInt']}
+     */
+    visitparseInt(node) {
+        this.code.comment('Inicio parseInt');
+
+        // Obtener la referencia del string si es una variable
+        if(node.exp instanceof ReferenciaVariable){
+            node.exp.accept(this);  // Esto cargará la referencia en T1 si es un string
+            this.code.mv(r.T0, r.T1);  // Copiar la referencia a T0 para procesarla
+            this.code.callBuiltin('parseIntReferencia');
+        }else{
+            
+            //node.exp.valor tiene el string, el cual debemos hacer el parse int
+            const valor = parseInt(node.exp.valor); 
+            const value =  Math.floor(valor);
+
+            // Cargar el valor en un registro temporal
+            this.code.li(r.T0, value);
+            this.code.push(r.T0);
+        }
+
+        // Empujar el objeto del entero al stack lógico
+        this.code.pushObject({ type: 'int', length: 4 });
+        this.code.comment('Fin parseInt');
+    }
+
+
+    /**
+     * @type {BaseVisitor['visitparseFloat']}
+     */    
+    visitparseFloat(node){
+
+        this.code.comment('Inicio parseFloat');
+
+        // Obtener la referencia del string si es una variable
+        if(node.exp instanceof ReferenciaVariable){
+            node.exp.accept(this);  // Esto cargará la referencia en T1 si es un string
+            this.code.mv(r.T0, r.T1);  // Copiar la referencia a T0 para procesarla
+            this.code.callBuiltin('parseFloatReferencia');
+        }else{
+            
+            //node.exp.valor tiene el string, el cual debemos hacer el parse float
+            const value = parseFloat(node.exp.valor); 
+            const ieee754 = numberToF32(value);  // Convertimos a IEEE 754 (32 bits)
+
+            // Cargar el valor en un registro temporal
+            this.code.li(r.T0, ieee754);
+            this.code.push(r.T0);
+        }
+
+        // Empujar el objeto del entero al stack lógico
+        this.code.pushObject({ type: 'float', length: 4 });
+        this.code.comment('Fin parseFloat');
+        
+    }
+
+    /**
+     * @type {BaseVisitor['visittoString']}
+     */
+    visittoString(node){
+
+    }
+
+
+    /**
+     * @type {BaseVisitor['visittoLowerCase']}
+     */
+    visittoLowerCase(node){
+
+    }
+
+
+    /**
+     * @type {BaseVisitor['visittoUpperCase']}
+     */
+    visittoUpperCase(node){
+
+    }
+
+    /**
+     * @type {BaseVisitor['visittypEof']}
+     */
+    visittypEof(node){
+
+    }
 
 }

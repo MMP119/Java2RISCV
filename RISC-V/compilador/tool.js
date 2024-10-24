@@ -544,6 +544,61 @@ const configuracionNodos = [
         ]
     },
     {
+        name: 'parseInt',
+        extends: 'Expresion',
+        props: [
+            {
+                name: 'exp',
+                type: 'Expresion',
+                description: 'Expresion a evaluar'
+            }
+        ]
+    },
+    {
+        name: 'parseFloat',
+        extends: 'Expresion',
+        props: [
+            {
+                name: 'exp',
+                type: 'Expresion',
+                description: 'Expresion a evaluar'
+            }
+        ]
+    },
+    {
+        name: 'toString',
+        extends: 'Expresion',
+        props: [
+            {
+                name: 'exp',
+                type: 'Expresion',
+                description: 'Expresion a evaluar'
+            }
+        ]
+    },
+    {
+        name: 'toLowerCase',
+        extends: 'Expresion',
+        props: [
+            {
+                name: 'exp',
+                type: 'Expresion',
+                description: 'Expresion a evaluar'
+            }
+        ]
+    },
+    {
+        name: 'toUpperCase',
+        extends: 'Expresion',
+        props: [
+            {
+                name: 'exp',
+                type: 'Expresion',
+                description: 'Expresion a evaluar'
+            }
+        ]
+    },
+    {
         name: 'typEof',
         extends: 'Expresion',
         props: [
