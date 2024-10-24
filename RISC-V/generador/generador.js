@@ -865,14 +865,23 @@ export class Generador {
 
     getObject(id) {
         let byteOffset = 0;
+    
+        // Recorrer desde el final hacia el inicio
         for (let i = this.objectStack.length - 1; i >= 0; i--) {
-            if (this.objectStack[i].id === id) {
-                return [byteOffset, this.objectStack[i]];
+            const objeto = this.objectStack[i];
+    
+            // Si encontramos el objeto con el ID que buscamos
+            if (objeto.id === id) {
+                return [byteOffset, objeto];
             }
-            byteOffset += this.objectStack[i].length;
+    
+            // Solo acumulamos el offset si no es un arreglo duplicado
+            if (objeto.type !== 'arreglo' || objeto.id !== undefined) {
+                byteOffset += objeto.length;
+            }
         }
-
-        throw new Error(`Variable ${id} not found`);
+    
+        throw new Error(`Variable ${id} no encontrada`);
     }
 
     toString() {

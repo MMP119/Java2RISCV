@@ -302,55 +302,64 @@ export class CompilerVisitor extends BaseVisitor{
         switch (node.method) {
         
             case 'indexOf': // Retorna el índice de la primera coincidencia o -1 si no existe
-                this.code.comment(`Metodo indexOf`);
-                
-                node.exp.accept(this); //el valor a buscar está en r.T0
-                //mover el valor a buscar a t5
-                this.code.mv(r.T5, r.T0);
-                
-                node.id.accept(this); //la direccion del arreglo está en r.T0
+                this.code.comment('Inicio Metodo indexOf');
+
+                // Obtener el valor a buscar y guardarlo en T5
+                node.exp.accept(this);  // Valor en r.T0
+                this.code.mv(r.T5, r.T0);  // Guardar el valor buscado en T5
+
+                // Obtener la referencia al arreglo
+                node.id.accept(this);  // Dirección base del arreglo en r.T0
                 const arregloInfo = this.code.getTopObject();
-                const size = arregloInfo.length / 4;
+                const size = arregloInfo.length / 4;  // Número de elementos en el arreglo
 
                 // Crear etiquetas
                 const labelStart = this.code.newEtiquetaUnica('indexOf_start');
                 const labelFound = this.code.newEtiquetaUnica('indexOf_found');
+                const labelNoFound = this.code.newEtiquetaUnica('indexOf_no_found');
                 const labelEnd = this.code.newEtiquetaUnica('indexOf_end');
 
-                this.code.li(r.T2, 0); //contador en t2 (indice)
-                //carger -1 en t3
-                this.code.li(r.T3, 1);
-                this.code.li(r.T4, 0);
-                this.code.sub(r.T3, r.T4, r.T3); //t3 = -1
-                
+                // Inicializar contador de índice (T2 = 0)
+                this.code.li(r.T2, 0);
+
+                // Cargar -1 en T3 para el caso de no encontrado
+                this.code.li(r.T3, -1);
+
                 this.code.label(labelStart);
-                this.code.li(r.T4, size); //tamaño del arreglo en t4
-                this.code.bgt(r.T2, r.T4, labelEnd); //si t2 > t4, salta al final
 
-                //calcular el offset y sumar al puntero base del arreglo
-                this.code.li(r.T4, 4);
-                this.code.mul(r.T4, r.T4, r.T2);
-                this.code.add(r.T1, r.T0, r.T4);
+                // Verificar si llegamos al final del arreglo
+                this.code.li(r.T4, size);  // Tamaño del arreglo en T4
+                this.code.bge(r.T2, r.T4, labelNoFound);  // Si T2 >= size, no encontrado
 
-                //cargar el valor del arreglo en t1, los valores vienen en bloques de 4 bytes desde r.t0
-                this.code.lw(r.T1, r.T1, 0); 
+                // Calcular el offset y obtener la dirección del elemento actual
+                this.code.li(r.A1, 4);  // Cada elemento ocupa 4 bytes
+                this.code.mul(r.A1, r.A1, r.T2);  // A1 = índice * 4 (offset)
+                this.code.add(r.A0, r.T0, r.A1);  // A0 = Dirección base + offset
 
-                //comparar el valor del arreglo con el valor a buscar
-                this.code.beq(r.T1, r.T5, labelFound); //si son iguales, salta a la etiqueta de encontrado
+                // Cargar el valor del elemento actual en T1
+                this.code.lw(r.T1, r.A0, 0);  // Valor en T1
 
-                this.code.addi(r.T2, r.T2, 1); //incrementar el contador
-                this.code.j(labelStart); //saltar al inicio
+                // Comparar el valor del arreglo con el valor buscado
+                this.code.beq(r.T1, r.T5, labelFound);  // Si son iguales, encontrado
 
+                // Incrementar el índice y repetir el ciclo
+                this.code.addi(r.T2, r.T2, 1);  // T2++
+                this.code.j(labelStart);  // Volver al inicio
+
+                // Si el valor fue encontrado, empujar el índice al stack
                 this.code.label(labelFound);
-                this.code.mv(r.T3, r.T2); //guardar el indice en t3
-                this.code.j(labelEnd); //saltar al final
+                this.code.push(r.T2);  // Empujar el índice encontrado
+                this.code.pushObject({ type: 'int', length: 4 });
+                this.code.j(labelEnd);  // Saltar al final
 
+                // Si no se encontró, empujar -1 al stack
+                this.code.label(labelNoFound);
+                this.code.push(r.T3);  // Empujar -1
+                this.code.pushObject({ type: 'int', length: 4 });
+
+                // Fin del método
                 this.code.label(labelEnd);
-                this.code.printInt(r.T3); //imprimir el indice
-                // this.code.push(r.T3);
-                // this.code.pushObject({ type: 'int', length: 4});
-
-                this.code.comment(`Fin Metodo indexOf`);
+                this.code.comment('Fin Metodo indexOf');
                 break;
 
             case 'join': //Une todos los elementos del array en un string, separado por comas Ej: [1,2,3]-> “1,2,3”
@@ -403,43 +412,36 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.comment('Fin Metodo setElement');
                 break;
 
-            case 'getElement': //algo como a[0], se obtiene el valor del arreglo en la posición 0;
-
-                this.code.comment('Metodo getElement');
-
+            case 'getElement': // Obtener un valor de un arreglo como a[0]
+                this.code.comment('Inicio Metodo getElement');
+            
                 // Obtener el índice y guardarlo en T5
-                node.exp[0].accept(this);  // Índice a modificar
-                const ind = this.code.getTopObject();                
-                
-                if(ind.hasOwnProperty('id')){ //el indice es una referencia a una variable
-                    //el valor está en t1
-                    this.code.mv(r.T5, r.T1);
-                }else{
-                    this.code.mv(r.T5, r.T0);  // Guardamos el índice en T5
+                node.exp[0].accept(this);  // Evaluar el índice y dejar el resultado en r.T0
+                const ind = this.code.getTopObject();
+            
+                if (ind.hasOwnProperty('id')) { // Si el índice es una variable
+                    this.code.mv(r.T5, r.T1);  // Copiar el valor desde T1 (valor de la variable)
+                } else {
+                    this.code.mv(r.T5, r.T0);  // Copiar el índice directamente a T5
                 }
-
-                // obtener la dirección base del arreglo
-                node.id.accept(this);  // dirección base del arreglo queda en r.T0
+            
+                // Obtener la referencia del arreglo
+                node.id.accept(this);  // Dirección base del arreglo queda en r.T0
                 this.code.mv(r.T3, r.T0);  // Guardamos la dirección base en T3
-                const obj = this.code.getTopObject();
                 
-                // Calcular el offset: offset = indice * 4
-                this.code.li(r.T4, 4);          // Cada entero ocupa 4 bytes
-                this.code.mul(r.T4, r.T5, r.T4);  // T4 = T5 * 4 (offset)
-                
+                // Parámetros: índice en T5, dirección base del arreglo en T3
+                this.code.li(r.T4, 4);           // Cada elemento ocupa 4 bytes
+                this.code.mul(r.T4, r.T5, r.T4); // T4 = T5 * 4 (offset)
+
                 // Sumar el offset a la dirección base del arreglo en A1
-                this.code.add(r.A1, r.T3, r.T4);  // A1 = A1 + offset
-                
-                // Cargar el valor en la posición calculada
-                this.code.lw(r.T2, r.A1, 0);  // Cargar el valor en T2
-                this.code.printInt(r.T2);  // Imprimir el valor
-                
-                //this.code.push(r.T2);  // Empujar el valor al stack
-                //this.code.pushObject({ type: 'int', length: 4 });
+                this.code.add(r.A1, r.T3, r.T4); // A1 = Dirección base + offset
+
+                // Cargar el valor del arreglo en T2
+                this.code.lw(r.T2, r.A1, 0);     // T2 = Mem[A1]
+                this.code.printInt(r.T2);
+
                 this.code.comment('Fin Metodo getElement');
-
                 break;
-
 
             default:
                 break;
@@ -753,8 +755,10 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.comment(`Referencia a variable ${node.id}: ${JSON.stringify(this.code.objectStack)}`);
 
         const [offset, variableObject] = this.code.getObject(node.id);
+        //console.log('variableObject', variableObject, 'offset', offset);
         
         if (this.insideFunction) {
+            //console.log('entra como referencia a variable en funcion');
             this.code.addi(r.T1, r.FP, -variableObject.offset * 4);
             this.code.lw(r.T0, r.T1);
             this.code.push(r.T0);
@@ -1191,7 +1195,7 @@ export class CompilerVisitor extends BaseVisitor{
      * @type {BaseVisitor['visitLlamada']}
      */
     visitLlamada(node){
-        console.log(node);
+        
         if(!(node.callee instanceof ReferenciaVariable)) return;
 
         const nombreFuncion = node.callee.id;
