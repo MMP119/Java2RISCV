@@ -659,6 +659,7 @@ export const toLowerCase = (code) => {
 
     const inicioBucle = code.newEtiquetaUnica('toLowerCase_inicio');
     const finBucle = code.newEtiquetaUnica('toLowerCase_fin');
+    const continuar = code.newEtiquetaUnica('continuar');
 
     // Etiqueta de inicio del bucle
     code.label(inicioBucle);
@@ -672,13 +673,16 @@ export const toLowerCase = (code) => {
     // Verificar si el carácter está en mayúscula ('A' <= char <= 'Z')
     code.li(r.T2, 65);  // ASCII de 'A'
     code.li(r.T3, 90);  // ASCII de 'Z'
-    code.blt(r.T1, r.T2, finBucle);  // Si T1 < 'A', continuar al siguiente
-    code.bgt(r.T1, r.T3, finBucle);  // Si T1 > 'Z', continuar al siguiente
+    
+    // Si el carácter no es mayúscula, saltar a continuar
+    code.blt(r.T1, r.T2, continuar);  // Si T1 < 'A', no convertir
+    code.bgt(r.T1, r.T3, continuar);  // Si T1 > 'Z', no convertir
 
     // Convertir a minúscula (char + 32)
     code.addi(r.T1, r.T1, 32);  // T1 = T1 + 32
 
     // Guardar el carácter convertido en el string
+    code.label(continuar);
     code.sb(r.T1, r.T0, 0);  // Mem[T0] = T1
 
     // Avanzar al siguiente carácter
@@ -695,7 +699,7 @@ export const toLowerCase = (code) => {
 
 export const toUpperCase = (code) => {
 
-const inicioBucle = code.newEtiquetaUnica('toUpperCase_inicio');
+    const inicioBucle = code.newEtiquetaUnica('toUpperCase_inicio');
     const finBucle = code.newEtiquetaUnica('toUpperCase_fin');
 
     // Etiqueta de inicio del bucle
@@ -710,13 +714,17 @@ const inicioBucle = code.newEtiquetaUnica('toUpperCase_inicio');
     // Verificar si el carácter está en minúscula ('a' <= char <= 'z')
     code.li(r.T2, 97);  // ASCII de 'a'
     code.li(r.T3, 122); // ASCII de 'z'
-    code.blt(r.T1, r.T2, inicioBucle);  // Si T1 < 'a', continuar
-    code.bgt(r.T1, r.T3, inicioBucle);  // Si T1 > 'z', continuar
+    const continuar = code.newEtiquetaUnica('continuar');
+
+    // Si no es una letra minúscula, saltar sin modificarlo
+    code.blt(r.T1, r.T2, continuar);  // Si T1 < 'a', continuar sin cambios
+    code.bgt(r.T1, r.T3, continuar);  // Si T1 > 'z', continuar sin cambios
 
     // Convertir a mayúscula (char - 32)
     code.addi(r.T1, r.T1, -32);  // T1 = T1 - 32
 
     // Guardar el carácter convertido en el string
+    code.label(continuar);
     code.sb(r.T1, r.T0, 0);  // Mem[T0] = T1
 
     // Avanzar al siguiente carácter
@@ -727,7 +735,6 @@ const inicioBucle = code.newEtiquetaUnica('toUpperCase_inicio');
 
     // Etiqueta de fin del bucle
     code.label(finBucle);
-
 
 }
 
