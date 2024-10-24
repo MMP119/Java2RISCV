@@ -1305,11 +1305,21 @@ export class CompilerVisitor extends BaseVisitor{
         
     }
 
-    /**
-     * @type {BaseVisitor['visittoString']}
-     */
-    visittoString(node){
 
+    /**
+     * @type {BaseVisitor['visitToString']}
+     */
+    visittoString(node) {
+        this.code.comment('Inicio toString');
+
+        node.exp.accept(this);  // Cargar el valor en el stack físico
+
+        
+        
+        
+        this.code.pushObject({ type: 'string', length: 4 });
+
+        this.code.comment('Fin toString');
     }
 
 
@@ -1317,7 +1327,19 @@ export class CompilerVisitor extends BaseVisitor{
      * @type {BaseVisitor['visittoLowerCase']}
      */
     visittoLowerCase(node){
+        this.code.comment('Inicio toLowerCase');
 
+        if(node.exp instanceof ReferenciaVariable){
+            node.exp.accept(this);
+            this.code.mv(r.T0, r.T1);  // Copiar la referencia a T0 para procesarla
+            this.code.callBuiltin('toLowerCase');
+        }else{
+            const string = node.exp.valor.toLowerCase();
+            this.code.pushContant({ type: 'string', valor: string });
+        }
+
+        this.code.pushObject({ type: 'string', length: 4 });
+        this.code.comment('Fin toLowerCase');
     }
 
 
@@ -1325,13 +1347,40 @@ export class CompilerVisitor extends BaseVisitor{
      * @type {BaseVisitor['visittoUpperCase']}
      */
     visittoUpperCase(node){
+        this.code.comment('Inicio toUpperCase');
 
+        if(node.exp instanceof ReferenciaVariable){
+            node.exp.accept(this);
+            this.code.mv(r.T0, r.T1);  // Copiar la referencia a T0 para procesarla
+            this.code.callBuiltin('toUpperCase');
+        }else{
+            const string = node.exp.valor.toUpperCase();
+            this.code.pushContant({ type: 'string', valor: string });
+        }
+
+        this.code.pushObject({ type: 'string', length: 4 });
+        this.code.comment('Fin toUpperCase');
     }
 
     /**
      * @type {BaseVisitor['visittypEof']}
      */
     visittypEof(node){
+        this.code.comment('Inicio typEof');
+
+        let tipoDato;
+        
+        if(node.exp instanceof ReferenciaVariable){
+            node.exp.accept(this);
+            this.code.mv(r.T0, r.T1);
+            const objeto = this.code.getTopObject();
+            tipoDato = objeto.type;
+        }else{
+            tipoDato = node.exp.tipo;
+        }
+        this.code.pushContant({ type: 'string', valor: tipoDato });
+        this.code.pushObject({ type: 'string', length: 4 });
+        this.code.comment('Fin typEof');
 
     }
 

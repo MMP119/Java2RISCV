@@ -627,6 +627,110 @@ export const parseFloatReferencia = (code) => {
     code.pushFloat(f.FT0);
 };
 
+
+export const intToString = (code) => {
+    code.comment('Convirtiendo int a string');
+    code.pop(r.T0);  // Obtener el entero del stack
+
+    // Usar syscall para imprimir el número como string
+    code.li(r.A7, 34);  // Syscall para convertir entero a string
+    code.ecall();
+
+    // Guardar la referencia al string en HP (heap pointer)
+    code.push(r.A0);  // Empujar la referencia al string generado
+};
+
+
+export const floatToString = (code) => {
+    code.comment('Convirtiendo float a string');
+    code.popFloat(f.FT0);  // Obtener el float del stack
+
+    // Usar syscall para convertir float a string con 2 decimales
+    code.li(r.A7, 35);  // Syscall para float to string
+    code.li(r.A1, 2);   // Especificar 2 decimales
+    code.ecall();
+
+    // Guardar la referencia al string en HP (heap pointer)
+    code.push(r.A0);  // Empujar la referencia al string generado
+};
+
+
+export const toLowerCase = (code) => {
+
+    const inicioBucle = code.newEtiquetaUnica('toLowerCase_inicio');
+    const finBucle = code.newEtiquetaUnica('toLowerCase_fin');
+
+    // Etiqueta de inicio del bucle
+    code.label(inicioBucle);
+
+    // Cargar el carácter actual en T1
+    code.lb(r.T1, r.T0, 0);  // T1 = Mem[T0] (carácter actual)
+
+    // Verificar si es el carácter nulo (fin del string)
+    code.beqz(r.T1, finBucle);  // Si T1 == 0, salir del bucle
+
+    // Verificar si el carácter está en mayúscula ('A' <= char <= 'Z')
+    code.li(r.T2, 65);  // ASCII de 'A'
+    code.li(r.T3, 90);  // ASCII de 'Z'
+    code.blt(r.T1, r.T2, finBucle);  // Si T1 < 'A', continuar al siguiente
+    code.bgt(r.T1, r.T3, finBucle);  // Si T1 > 'Z', continuar al siguiente
+
+    // Convertir a minúscula (char + 32)
+    code.addi(r.T1, r.T1, 32);  // T1 = T1 + 32
+
+    // Guardar el carácter convertido en el string
+    code.sb(r.T1, r.T0, 0);  // Mem[T0] = T1
+
+    // Avanzar al siguiente carácter
+    code.addi(r.T0, r.T0, 1);  // T0++
+
+    // Volver al inicio del bucle
+    code.j(inicioBucle);
+
+    // Etiqueta de fin del bucle
+    code.label(finBucle);
+
+}
+
+
+export const toUpperCase = (code) => {
+
+const inicioBucle = code.newEtiquetaUnica('toUpperCase_inicio');
+    const finBucle = code.newEtiquetaUnica('toUpperCase_fin');
+
+    // Etiqueta de inicio del bucle
+    code.label(inicioBucle);
+
+    // Cargar el carácter actual en T1
+    code.lb(r.T1, r.T0, 0);  // T1 = Mem[T0] (carácter actual)
+
+    // Verificar si es el carácter nulo (fin del string)
+    code.beqz(r.T1, finBucle);  // Si T1 == 0, salir del bucle
+
+    // Verificar si el carácter está en minúscula ('a' <= char <= 'z')
+    code.li(r.T2, 97);  // ASCII de 'a'
+    code.li(r.T3, 122); // ASCII de 'z'
+    code.blt(r.T1, r.T2, inicioBucle);  // Si T1 < 'a', continuar
+    code.bgt(r.T1, r.T3, inicioBucle);  // Si T1 > 'z', continuar
+
+    // Convertir a mayúscula (char - 32)
+    code.addi(r.T1, r.T1, -32);  // T1 = T1 - 32
+
+    // Guardar el carácter convertido en el string
+    code.sb(r.T1, r.T0, 0);  // Mem[T0] = T1
+
+    // Avanzar al siguiente carácter
+    code.addi(r.T0, r.T0, 1);  // T0++
+
+    // Volver al inicio del bucle
+    code.j(inicioBucle);
+
+    // Etiqueta de fin del bucle
+    code.label(finBucle);
+
+
+}
+
 export const builtins = {
     concatString: concatString,
     igualdad: igualdad,
@@ -647,6 +751,9 @@ export const builtins = {
     printBool: printBool,
     parseIntReferencia: parseIntReferencia,
     parseFloatReferencia: parseFloatReferencia,
-
+    intToString: intToString,
+    floatToString: floatToString,
+    toLowerCase: toLowerCase,
+    toUpperCase: toUpperCase
 
 }
