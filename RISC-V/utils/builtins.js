@@ -500,6 +500,7 @@ export const parseIntReferencia = (code) => {
     const inicioBucle = code.newEtiquetaUnica('parseInt_inicio');
     const finBucle = code.newEtiquetaUnica('parseInt_fin');
     const puntoDecimal = code.newEtiquetaUnica('punto_decimal');
+    const errorLabel = code.newEtiquetaUnica('parseInt_error'); // Nueva etiqueta de error
 
     // Etiqueta de inicio del bucle
     code.label(inicioBucle);
@@ -508,14 +509,19 @@ export const parseIntReferencia = (code) => {
     code.lb(r.T2, r.T0, 0);  // T2 = Mem[T0] (carácter actual)
 
     // Verificar si es el carácter nulo (fin del string)
-    code.beqz(r.T2, finBucle);  // Si T2 == 0 (fin del string), salir del bucle
+    code.beqz(r.T2, finBucle);  // Si T2 == 0, salir del bucle
 
     // Verificar si es un punto decimal ('.')
     code.li(r.T3, 46);  // ASCII de '.'
-    code.beq(r.T2, r.T3, puntoDecimal);  // Si T2 == '.', saltar a punto_decimal
+    code.beq(r.T2, r.T3, puntoDecimal);  // Si es '.', saltar a punto_decimal
+
+    // Verificar si es un dígito válido ('0' <= char <= '9')
+    code.li(r.T3, 48);  // ASCII de '0'
+    code.li(r.T4, 57);  // ASCII de '9'
+    code.blt(r.T2, r.T3, errorLabel);  // Si char < '0', saltar a error
+    code.bgt(r.T2, r.T4, errorLabel);  // Si char > '9', saltar a error
 
     // Restar '0' para obtener el valor numérico del dígito
-    code.li(r.T3, 48);  // ASCII de '0'
     code.sub(r.T2, r.T2, r.T3);  // T2 = T2 - '0'
 
     // Multiplicar el acumulador por 10 y sumar el dígito actual
@@ -534,10 +540,16 @@ export const parseIntReferencia = (code) => {
     code.comment('Truncando en el punto decimal');
     code.j(finBucle);  // Saltar al fin del bucle
 
+    // Etiqueta de error
+    code.label(errorLabel);
+    code.comment('ERROR: Caracter no válido encontrado');
+    code.printStringLiteral("ERROR: No se pudo convertir a entero");  // Imprimir mensaje de error
+    code.j(finBucle);  // Saltar al fin del bucle
+
     // Etiqueta de fin del bucle
     code.label(finBucle);
 
-    // Empujar el resultado al stack físico
+    // Empujar el resultado al stack físico solo si es válido
     code.push(r.T1);  // Empujar el valor final al stack
 };
 
@@ -553,6 +565,7 @@ export const parseFloatReferencia = (code) => {
     const finBucle = code.newEtiquetaUnica('parseFloat_fin');
     const procesarDecimal = code.newEtiquetaUnica('parseFloat_decimal');
     const procesandoParteDecimal = code.newEtiquetaUnica('procesando_decimal');
+    const errorLabel = code.newEtiquetaUnica('parseFloat_error');  // Etiqueta de error
 
     // Etiqueta de inicio del bucle
     code.label(inicioBucle);
@@ -567,8 +580,13 @@ export const parseFloatReferencia = (code) => {
     code.li(r.T4, 46);  // ASCII de '.'
     code.beq(r.T3, r.T4, procesarDecimal);  // Si es '.', ir a procesar decimales
 
-    // Restar 0 para obtener el valor numérico
+    // Verificar si es un dígito válido ('0' <= char <= '9')
     code.li(r.T4, 48);  // ASCII de '0'
+    code.li(r.T5, 57);  // ASCII de '9'
+    code.blt(r.T3, r.T4, errorLabel);  // Si char < '0', error
+    code.bgt(r.T3, r.T5, errorLabel);  // Si char > '9', error
+
+    // Restar '0' para obtener el valor numérico
     code.sub(r.T3, r.T3, r.T4);  // T3 = T3 - '0'
 
     // Multiplicar parte entera por 10 y sumar el dígito
@@ -586,29 +604,30 @@ export const parseFloatReferencia = (code) => {
     code.label(procesarDecimal);
     code.addi(r.T0, r.T0, 1);  // Avanzar al siguiente carácter
 
-    // Bucle para procesar decimales
+    // Bucle para procesar la parte decimal
     code.label(procesandoParteDecimal);
-    code.lb(r.T3, r.T0, 0);  // Cargar carácter actual
+    code.lb(r.T3, r.T0, 0);  // Cargar el carácter actual
 
     // Verificar si es el carácter nulo
-    code.beqz(r.T3, finBucle);  // Salir si es nulo
+    code.beqz(r.T3, finBucle);  // Si es 0, salir del bucle
 
-    // Restar '0' para obtener valor numérico
-    code.li(r.T4, 48);
-    code.sub(r.T3, r.T3, r.T4);
+    // Verificar si es un dígito válido ('0' <= char <= '9')
+    code.li(r.T4, 48);  // ASCII de '0'
+    code.li(r.T5, 57);  // ASCII de '9'
+    code.blt(r.T3, r.T4, errorLabel);  // Si char < '0', error
+    code.bgt(r.T3, r.T5, errorLabel);  // Si char > '9', error
+
+    // Restar '0' para obtener el valor numérico
+    code.sub(r.T3, r.T3, r.T4);  // T3 = T3 - '0'
 
     // Actualizar divisor decimal
     code.li(r.T4, 10);
     code.mul(r.T2, r.T2, r.T4);  // T2 *= 10
 
-    // Calcular valor decimal y agregarlo a FT0
-    code.li(r.T4, 1);  // FT1 = 1.0
-    code.fcvtsw(f.FT1, r.T4);  // FT1 = T3
-    code.fcvtsw(f.FT2, r.T3);  // FT2 = T3
-    code.fcvtsw(f.FT3, r.T2);  // FT3 = divisor
-    code.fmul(f.FT1, f.FT1, f.FT2);  // FT1 *= T3
-    code.fdiv(f.FT1, f.FT1, f.FT3);  // FT1 /= divisor
-    code.fadd(f.FT0, f.FT0, f.FT1);  // FT0 += FT1
+    // Calcular la parte decimal
+    code.fcvtsw(f.FT1, r.T3);  // Convertir T3 a float
+    code.fdiv(f.FT1, f.FT1, f.FT2);  // Dividir por el divisor decimal
+    code.fadd(f.FT0, f.FT0, f.FT1);  // Sumar al acumulador decimal
 
     // Avanzar al siguiente carácter
     code.addi(r.T0, r.T0, 1);  // T0++
@@ -616,14 +635,20 @@ export const parseFloatReferencia = (code) => {
     // Volver a procesar más decimales
     code.j(procesandoParteDecimal);
 
+    // Etiqueta de error
+    code.label(errorLabel);
+    code.comment('ERROR: Caracter no válido encontrado');
+    code.printStringLiteral("ERROR: No se pudo convertir a float");  // Imprimir error
+    code.j(finBucle);  // Saltar al fin
+
     // Fin del bucle
     code.label(finBucle);
 
     // Combinar parte entera y decimal
-    code.fcvtsw(f.FT4, r.T1);  // FT4 = parte entera
-    code.fadd(f.FT0, f.FT0, f.FT4);  // FT0 = T1 + FT0
+    code.fcvtsw(f.FT2, r.T1);  // Convertir parte entera a float
+    code.fadd(f.FT0, f.FT0, f.FT2);  // Sumar parte entera y decimal
 
-    // Empujar resultado al stack
+    // Empujar el resultado al stack
     code.pushFloat(f.FT0);
 };
 
@@ -800,6 +825,9 @@ export const toUpperCase = (code) => {
     code.label(finBucle);
 
 }
+
+
+
 
 export const builtins = {
     concatString: concatString,

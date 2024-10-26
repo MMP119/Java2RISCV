@@ -884,6 +884,24 @@ export class Generador {
         throw new Error(`Variable ${id} no encontrada`);
     }
 
+
+    printStringLiteral(string){
+        const stringArray = stringTo1ByteArray(string);
+        stringArray.pop(); // Eliminar el caracter nulo al final
+
+        this.comment(`Imprimiendo string literal ${string}`);
+
+        stringArray.forEach((charCode) => {
+            this.li(r.A0, charCode);
+            this.printChar();
+        });
+
+        //salto de línea
+        this.li(r.A0, 10);
+        this.printChar();
+        
+    }
+
     toString() {
         this.endProgram()
         this.comment('Builtins')

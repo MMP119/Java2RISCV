@@ -102,7 +102,7 @@ document.getElementById('runButton').addEventListener('click', () => {
         let parseo = false;
         if(erroes.length > 0){
             erroes.forEach(error => {
-                if(error.mensaje === 'No se puede dividir entre 0'){
+                if(error.mensaje === 'No se puede dividir entre 0' || error.mensaje === 'No puede convertirse a int' || error.mensaje === 'No puede convertirse a float'){
                     console.log(error)
                     parseo = true; //si hay un error de division entre 0 se puede parsear, otro error no
                 }
