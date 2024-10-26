@@ -1187,6 +1187,8 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.instruccionesDeFunciones.push(instruccion);
         });
 
+        this.insideFunction = false;
+
     }
 
 
@@ -1205,12 +1207,14 @@ export class CompilerVisitor extends BaseVisitor{
         const etiquetaRetornoLlamada = this.code.newEtiquetaUnica('returnLlamada');
 
         //guardar los argumentos
-        node.args.forEach((arg, index)=>{
+        this.code.addi(r.SP, r.SP, -4 * 2)
+        node.args.forEach((arg)=>{
             arg.accept(this);
-            this.code.popObject(r.T0);
-            this.code.addi(r.T1, r.SP, -4*(3+index));
-            this.code.sw(r.T0, r.T1);
+            // this.code.popObject(r.T0);
+            // this.code.addi(r.T1, r.SP, -4*(3+index));
+            // this.code.sw(r.T0, r.T1);
         });
+        this.code.addi(r.SP, r.SP, 4 * (node.args.length + 2))
 
         //calcular direccion del nuevo fp en tq
         this.code.addi(r.T1, r.SP, -4);
@@ -1224,14 +1228,14 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.addi(r.FP, r.T1, 0);
 
         //coloca el sp al final del frame
-        this.code.addi(r.SP, r.SP, -(node.args.length*4));
+        const frameSize = this.functionMetadata[nombreFuncion].frameSize;
+        this.code.addi(r.SP, r.SP, -(frameSize - 2) * 4)
 
         //saltar a la funcion
         this.code.j(nombreFuncion);
         this.code.label(etiquetaRetornoLlamada);
 
         //recuperar el valor del retorno
-        const frameSize = this.functionMetadata[nombreFuncion].frameSize;
         const returnSize =frameSize - 1;
         this.code.addi(r.T0, r.FP, -returnSize*4);
         this.code.lw(r.A0, r.T0);
@@ -1241,7 +1245,7 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.lw(r.FP, r.T0);
 
         //regresar el sp al contexto de ejecucion 
-        this.code.addi(r.SP, r.SP, (frameSize-1)*4);
+        this.code.addi(r.SP, r.SP, frameSize*4);
 
         this.code.push(r.A0);
         this.code.pushObject({ type: this.functionMetadata[nombreFuncion].returnType, length: 4 });
