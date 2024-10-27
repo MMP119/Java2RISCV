@@ -2,7 +2,7 @@ import { registers as r, floatRegisters as f } from "../constantes/constantes.js
 import { Generador } from "../generador/generador.js";
 import { BaseVisitor} from "../compilador/visitor.js"
 import { registrarError } from "../../interprete/global/errores.js";
-import { numberToF32 } from "../utils/utils.js";
+import { numberToF32, stringTo1ByteArray } from "../utils/utils.js";
 import { FrameVisitor } from "./frame.js";
 import { ReferenciaVariable } from "./nodos.js";
 
@@ -542,8 +542,20 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '/':
+                const divZero = this.code.newEtiquetaUnica('divisionByZero');
+                const finDiv = this.code.newEtiquetaUnica('finDivision');
+                this.code.beq(r.T0, r.ZERO, divZero);
                 this.code.div(r.T0, r.T1, r.T0);
                 this.code.push(r.T0);
+                this.code.j(finDiv);
+        
+                this.code.label(divZero);
+                this.code.printStringLiteral("Error: División por cero");
+                this.code.li(r.T0, 0);
+                this.code.push(r.T0);
+                this.code.j(finDiv);
+                
+                this.code.label(finDiv);
                 this.code.pushObject({ type: 'int', length: 4 });
                 break;
             case '%':               
